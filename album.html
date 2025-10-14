@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album - Family Travel Map</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+
+    <!-- PhotoSwipe CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="index.html" class="back-link">&larr; Back to Map</a>
+        </nav>
+    </header>
+
+    <main class="album-container">
+        <!-- Small location map -->
+        <div id="album-map" class="album-map" aria-label="Album location map"></div>
+
+        <!-- Album header -->
+        <div class="album-header">
+            <h1 id="album-title">Loading...</h1>
+            <p id="album-date" class="album-date"></p>
+            <p id="album-description" class="album-description"></p>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading" role="status" aria-live="polite">
+            Loading photos...
+        </div>
+
+        <!-- Photo/Video Grid -->
+        <div id="gallery" class="gallery" role="list">
+            <!-- Dynamically populated -->
+        </div>
+    </main>
+
+    <!-- PhotoSwipe markup -->
+    <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="pswp__bg"></div>
+        <div class="pswp__scroll-wrap">
+            <div class="pswp__container">
+                <div class="pswp__item"></div>
+                <div class="pswp__item"></div>
+                <div class="pswp__item"></div>
+            </div>
+            <div class="pswp__ui pswp__ui--hidden">
+                <div class="pswp__top-bar">
+                    <div class="pswp__counter"></div>
+                    <button class="pswp__button pswp__button--close" title="Close (Esc)" aria-label="Close"></button>
+                    <button class="pswp__button pswp__button--zoom" title="Zoom in/out" aria-label="Zoom"></button>
+                    <button class="pswp__button pswp__alt-button" title="Show caption" aria-label="Show caption">ALT</button>
+                    <div class="pswp__preloader">
+                        <div class="pswp__preloader__icn">
+                            <div class="pswp__preloader__cut">
+                                <div class="pswp__preloader__donut"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pswp__caption">
+                    <div class="pswp__caption__center"></div>
+                </div>
+                <button class="pswp__button pswp__button--arrow--left" title="Previous" aria-label="Previous"></button>
+                <button class="pswp__button pswp__button--arrow--right" title="Next" aria-label="Next"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
+    <!-- PhotoSwipe JS -->
+    <script type="module">
+        import PhotoSwipeLightbox from 'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.min.js';
+        import PhotoSwipe from 'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.min.js';
+
+        // Make available globally for album.js
+        window.PhotoSwipeLightbox = PhotoSwipeLightbox;
+        window.PhotoSwipe = PhotoSwipe;
+    </script>
+
+    <script src="album.js" defer></script>
+</body>
+</html>
