@@ -7,6 +7,9 @@ async function initMap() {
     try {
         // Fetch albums data
         const response = await fetch('albums.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         albums = await response.json();
 
         // Initialize Leaflet map
