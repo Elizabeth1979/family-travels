@@ -97,8 +97,19 @@ async function loadPhotos() {
       return;
     }
 
-    // Sort by name (optional)
-    galleryItems.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort by type (images first, then videos), then by name within each type
+    galleryItems.sort((a, b) => {
+      const aIsVideo = a.mime && a.mime.startsWith("video/");
+      const bIsVideo = b.mime && b.mime.startsWith("video/");
+
+      // If one is video and other is not, images come first
+      if (aIsVideo !== bIsVideo) {
+        return aIsVideo ? 1 : -1;
+      }
+
+      // Within same type, sort by name
+      return a.name.localeCompare(b.name);
+    });
 
     // Render gallery
     renderGallery();
@@ -173,8 +184,32 @@ function renderGallery() {
   const galleryEl = document.getElementById("gallery");
   galleryEl.innerHTML = "";
 
+  let lastType = null; // Track if we've switched from images to videos
+
   galleryItems.forEach((item, index) => {
     const isVideo = item.mime && item.mime.startsWith("video/");
+
+    // Add section header when we switch from images to videos
+    if (lastType === false && isVideo === true) {
+      const videoSectionHeader = document.createElement("div");
+      videoSectionHeader.className = "section-header";
+      videoSectionHeader.innerHTML = '<h2>Videos</h2>';
+      galleryEl.appendChild(videoSectionHeader);
+    } else if (lastType === null && isVideo === false) {
+      // Add Photos header at the beginning if we have images
+      const photoSectionHeader = document.createElement("div");
+      photoSectionHeader.className = "section-header";
+      photoSectionHeader.innerHTML = '<h2>Photos</h2>';
+      galleryEl.appendChild(photoSectionHeader);
+    } else if (lastType === null && isVideo === true) {
+      // Only videos in album
+      const videoSectionHeader = document.createElement("div");
+      videoSectionHeader.className = "section-header";
+      videoSectionHeader.innerHTML = '<h2>Videos</h2>';
+      galleryEl.appendChild(videoSectionHeader);
+    }
+
+    lastType = isVideo;
 
     const galleryItem = document.createElement("a");
     galleryItem.href = item.src;
@@ -184,19 +219,50 @@ function renderGallery() {
     // Let PhotoSwipe calculate dimensions from the actual image
 
     if (isVideo) {
-      // Video thumbnail
-      const video = document.createElement("video");
-      video.src = item.src;
-      video.className = "gallery-media";
-      video.setAttribute("loading", "lazy");
-      video.setAttribute("preload", "metadata");
-      video.muted = true;
+      // For videos, try to get thumbnail from Google Drive
+      const videoThumbnail = document.createElement("img");
+      videoThumbnail.className = "gallery-media";
+      videoThumbnail.setAttribute("loading", "lazy");
+
+      // Extract file ID from Google Drive URL
+      let thumbnailUrl = null;
+      const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        const fileId = fileIdMatch[1];
+        // Use Google Drive thumbnail API (size options: s220, s400, s640, s1600)
+        thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+      }
+
+      if (thumbnailUrl) {
+        videoThumbnail.src = thumbnailUrl;
+        videoThumbnail.alt = item.name || "Video thumbnail";
+
+        // Fallback to gradient placeholder if thumbnail fails to load
+        videoThumbnail.onerror = () => {
+          videoThumbnail.style.display = 'none';
+          const placeholder = document.createElement("div");
+          placeholder.className = "gallery-media video-placeholder";
+          galleryItem.insertBefore(placeholder, galleryItem.firstChild);
+        };
+      } else {
+        // Use gradient placeholder if we can't extract file ID
+        videoThumbnail.style.display = 'none';
+        const placeholder = document.createElement("div");
+        placeholder.className = "gallery-media video-placeholder";
+        galleryItem.appendChild(placeholder);
+      }
+
+      // Add video icon/text
+      const videoLabel = document.createElement("div");
+      videoLabel.className = "video-label";
+      videoLabel.textContent = "VIDEO";
 
       const playIcon = document.createElement("div");
       playIcon.className = "play-icon";
       playIcon.innerHTML = "▶";
 
-      galleryItem.appendChild(video);
+      galleryItem.appendChild(videoThumbnail);
+      galleryItem.appendChild(videoLabel);
       galleryItem.appendChild(playIcon);
       galleryItem.setAttribute("data-pswp-type", "video");
     } else {
