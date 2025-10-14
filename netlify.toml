@@ -4,14 +4,6 @@
   # No build command needed for static site
   publish = "."
 
-# Redirect rules (optional)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false
-  conditions = {Role = ["not-found"]}
-
 # Headers for security and caching
 [[headers]]
   for = "/*"
