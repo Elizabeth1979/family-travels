@@ -2,10 +2,6 @@
 let currentAlbum = null;
 let galleryItems = [];
 
-// Replace this with your actual Google Apps Script URL
-const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwpZcOHQPdr2st43M5Riz3-d4Tq-gp00WEJR3QTgnbwsw-wtyHUkd4qbKFqL8FGodk/exec";
-
 // Initialize the album page
 async function initAlbum() {
   try {
@@ -18,7 +14,8 @@ async function initAlbum() {
       return;
     }
 
-    // Load albums data
+    // Load albums data from static file for faster loading
+    // We only need the album metadata, not to fetch it dynamically every time
     const response = await fetch("albums.json");
     const albums = await response.json();
 
@@ -82,7 +79,7 @@ async function loadPhotos() {
     loadingEl.style.display = "block";
 
     // Fetch files from Google Apps Script
-    const response = await fetch(`${APPS_SCRIPT_URL}?folder=${currentAlbum.folderId}`);
+    const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${currentAlbum.folderId}`);
 
     if (!response.ok) {
       throw new Error("Failed to fetch photos from Google Drive");
@@ -114,13 +111,15 @@ async function loadPhotos() {
     // Render gallery
     renderGallery();
 
-    // Load image dimensions before initializing PhotoSwipe
-    await loadImageDimensions();
+    // Hide loading indicator immediately so users see photos faster
+    loadingEl.style.display = "none";
 
-    // Initialize PhotoSwipe
+    // Initialize PhotoSwipe (it will handle dimensions automatically)
     initPhotoSwipe();
 
-    loadingEl.style.display = "none";
+    // Load image dimensions in background for better PhotoSwipe experience
+    // This doesn't block the UI anymore
+    loadImageDimensions();
   } catch (error) {
     console.error("Error loading photos:", error);
     loadingEl.textContent =
@@ -129,54 +128,66 @@ async function loadPhotos() {
   }
 }
 
-// Load actual dimensions for each image
+// Load actual dimensions for each image (lazy loaded in background)
 async function loadImageDimensions() {
   const galleryLinks = document.querySelectorAll('#gallery a');
 
-  const promises = Array.from(galleryLinks).map((link, index) => {
-    return new Promise((resolve) => {
-      const item = galleryItems[index];
-      const isVideo = item.mime && item.mime.startsWith("video/");
+  // Process images in batches to avoid overwhelming the browser
+  const batchSize = 5;
+  const links = Array.from(galleryLinks);
 
-      if (isVideo) {
-        // For videos, load video metadata to get actual dimensions
-        const video = document.createElement('video');
-        video.preload = 'metadata';
+  for (let i = 0; i < links.length; i += batchSize) {
+    const batch = links.slice(i, i + batchSize);
 
-        video.onloadedmetadata = () => {
-          link.setAttribute("data-pswp-width", video.videoWidth);
-          link.setAttribute("data-pswp-height", video.videoHeight);
-          resolve();
-        };
+    await Promise.all(batch.map((link, batchIndex) => {
+      return new Promise((resolve) => {
+        const index = i + batchIndex;
+        const item = galleryItems[index];
+        const isVideo = item.mime && item.mime.startsWith("video/");
 
-        video.onerror = () => {
-          // Fallback dimensions if video fails to load
-          link.setAttribute("data-pswp-width", "1920");
-          link.setAttribute("data-pswp-height", "1080");
-          resolve();
-        };
+        if (isVideo) {
+          // For videos, load video metadata to get actual dimensions
+          const video = document.createElement('video');
+          video.preload = 'metadata';
 
-        video.src = link.href;
-      } else {
-        // For images, load and get natural dimensions
-        const img = new Image();
-        img.onload = () => {
-          link.setAttribute("data-pswp-width", img.naturalWidth);
-          link.setAttribute("data-pswp-height", img.naturalHeight);
-          resolve();
-        };
-        img.onerror = () => {
-          // Fallback dimensions if image fails to load
-          link.setAttribute("data-pswp-width", "1920");
-          link.setAttribute("data-pswp-height", "1080");
-          resolve();
-        };
-        img.src = link.href;
-      }
-    });
-  });
+          video.onloadedmetadata = () => {
+            link.setAttribute("data-pswp-width", video.videoWidth);
+            link.setAttribute("data-pswp-height", video.videoHeight);
+            resolve();
+          };
 
-  await Promise.all(promises);
+          video.onerror = () => {
+            // Fallback dimensions if video fails to load
+            link.setAttribute("data-pswp-width", "1920");
+            link.setAttribute("data-pswp-height", "1080");
+            resolve();
+          };
+
+          video.src = link.href;
+        } else {
+          // For images, load and get natural dimensions
+          const img = new Image();
+          img.onload = () => {
+            link.setAttribute("data-pswp-width", img.naturalWidth);
+            link.setAttribute("data-pswp-height", img.naturalHeight);
+            resolve();
+          };
+          img.onerror = () => {
+            // Fallback dimensions if image fails to load
+            link.setAttribute("data-pswp-width", "1920");
+            link.setAttribute("data-pswp-height", "1080");
+            resolve();
+          };
+          img.src = link.href;
+        }
+      });
+    }));
+
+    // Small delay between batches to keep UI responsive
+    if (i + batchSize < links.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
 }
 
 // Render gallery grid
@@ -235,7 +246,8 @@ function renderGallery() {
 
       if (thumbnailUrl) {
         videoThumbnail.src = thumbnailUrl;
-        videoThumbnail.alt = item.name || "Video thumbnail";
+        // Use description as alt text if available, otherwise generate from filename
+        videoThumbnail.alt = item.description || generateAltTextFromFilename(item.name) || "Video thumbnail";
 
         // Fallback to gradient placeholder if thumbnail fails to load
         videoThumbnail.onerror = () => {
@@ -269,7 +281,8 @@ function renderGallery() {
       // Image thumbnail
       const img = document.createElement("img");
       img.src = item.src;
-      img.alt = item.name || "Photo";
+      // Use description as alt text if available, otherwise generate from filename
+      img.alt = item.description || generateAltTextFromFilename(item.name) || "Photo";
       img.className = "gallery-media";
       img.setAttribute("loading", "lazy");
 
@@ -364,6 +377,37 @@ function initPhotoSwipe() {
   });
 
   lightbox.init();
+}
+
+// Generate readable alt text from filename
+function generateAltTextFromFilename(filename) {
+  if (!filename) return "";
+
+  // Remove file extension
+  let name = filename.replace(/\.(jpg|jpeg|png|gif|webp|mp4|mov|avi)$/i, "");
+
+  // Replace common separators with spaces
+  name = name.replace(/[-_]/g, " ");
+
+  // Remove common photo naming patterns
+  name = name.replace(/^(IMG|DSC|DCIM|photo|image|vid|video)[\s_-]*/i, "");
+
+  // Remove date patterns (YYYY-MM-DD, YYYYMMDD, etc.)
+  name = name.replace(/\d{4}[-_]?\d{2}[-_]?\d{2}/g, "");
+
+  // Remove timestamp patterns
+  name = name.replace(/\d{6,}/g, "");
+
+  // Clean up extra spaces
+  name = name.replace(/\s+/g, " ").trim();
+
+  // If nothing left, return generic text
+  if (!name) return "Photo from " + currentAlbum.title;
+
+  // Capitalize first letter
+  name = name.charAt(0).toUpperCase() + name.slice(1);
+
+  return name;
 }
 
 // Show error message

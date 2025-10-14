@@ -6,7 +6,8 @@
     "description": "Hiking and exploring the beautiful Ein Gedi nature reserve",
     "lat": 31.4618,
     "lng": 35.3889,
-    "folderId": "15qNFTyBiV3jMpoFCyLMnz2e0RnAMUKOJ"
+    "folderId": "15qNFTyBiV3jMpoFCyLMnz2e0RnAMUKOJ",
+    "cover": "https://lh3.googleusercontent.com/d/1HPfZAGddAaQpSIJgWPqtgH-DMPDR0XW9=s2000"
   },
   {
     "id": "habonim-oct-2025",
@@ -15,7 +16,8 @@
     "description": "Beach day at HaBonim with the family",
     "lat": 32.6333,
     "lng": 34.9167,
-    "folderId": "1T4jt8St478DiKLwx4UTrWp8vcFFYpYoK"
+    "folderId": "1T4jt8St478DiKLwx4UTrWp8vcFFYpYoK",
+    "cover": "https://lh3.googleusercontent.com/d/13H2TUd8I3qY6-5dRQqEjYT_Z0KIxZ8mq=s2000"
   },
   {
     "id": "jerusalem-oct-2025",
@@ -24,6 +26,7 @@
     "description": "Exploring the old city and historic sites",
     "lat": 31.7683,
     "lng": 35.2137,
-    "folderId": "1TPNOUxZ5XjuMcwQc-d6C_HWCFc4ZNfF-"
+    "folderId": "1TPNOUxZ5XjuMcwQc-d6C_HWCFc4ZNfF-",
+    "cover": "https://lh3.googleusercontent.com/d/115Va1gEgwLbddlJ7r-cOXDoUK3yAB3dD=s2000"
   }
 ]

@@ -5,8 +5,10 @@ let albums = [];
 // Initialize the map
 async function initMap() {
     try {
-        // Fetch albums data
+        // Fetch albums data from static file for faster loading
+        // Use albums.json which is kept in sync with Google Drive
         const response = await fetch('albums.json');
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
