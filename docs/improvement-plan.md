@@ -23,22 +23,16 @@ Here we reorganize the existing CSS so it keeps the current look and animations 
 ## 3. Component-Level Enhancements
 
 In this step we align the header, map, popups, and albums so they share consistent styling, behavior, and accessibility support without changing the visual theme.
-- [x] **Header & Navigation**
-  - [x] Introduce shared header classes (`.site-header`, `.site-nav`, `.site-brand`) inside `styles/components.css`; update `index.html` and `album.html` to adopt them so typography and spacing stay consistent across pages.
-  - [x] Add a visually hidden `.skip-link` anchored before the header in both templates, wire it to `#main-content`, and style focus states using the global focus token from `styles/utilities.css`.
-  - [x] Expand nav focus/hover styling to ensure the back link, menu toggle, and any future nav items share the same outline/shadow treatments.
-- [x] **Map & Sidebar**
-  - [x] Move the `#map` sizing rules and sidebar layout out of inline styles and into `styles/layout.css`, adding responsive variants that convert the sidebar to a bottom sheet below ~768px.
-  - [x] Replace the `right`-based animation on `.album-list` with `transform: translateX` (and `translateY` for the mobile sheet) and update `map.js` to toggle a semantic modifier class such as `.is-open`.
-  - [x] Define shared shadow/blur tokens (e.g., `--shadow-lg`, `--frosted-blur`) in `:root` and apply them to the floating action button, sidebar, and popups for visual consistency.
-- [x] **Popups**
-  - [x] Create `.map-popup`, `.popup-cover`, `.popup-title`, `.popup-meta`, and `.popup-actions` styles in `styles/components.css` that mirror the gradient/glass aesthetic without needing inline declarations.
-  - [x] Refactor `createPopupContent` in `map.js` to assign these classes and remove manual `style.*` properties; ensure buttons rely on existing utility classes (e.g., `.btn-primary`) rather than per-instance styling.
-  - [x] Add focusable structure inside the popup (e.g., wrapping button group) and verify Leaflet receives the custom class via `marker.bindPopup`.
-- [x] **Album Page**
-  - [x] Convert `.gallery` into a responsive CSS grid using `repeat(auto-fit, minmax(220px, 1fr))` in `styles/layout.css`, and add gap/spacing tokens that scale down for mobile.
-  - [x] Centralize `.gallery-item`, `.gallery-media`, `.video-label`, `.play-icon`, and `.video-placeholder` definitions in `styles/components.css`; adjust `album.js` to drop inline fallbacks and toggle state classes like `.is-video`.
-  - [x] Extend the shared status styles from Step 2 (e.g., `.loading`, `.error`, `.info`) so album loading and network error messages inherit accessible color contrast and padding without custom inline colors.
+- [ ] **Header & Navigation:** Extract header styling into reusable classes, ensure proper focus styles, and consider adding skip links for accessibility.
+- [ ] **Map & Sidebar:**
+  - Move map height/width settings into CSS and provide fallbacks for small screens (e.g., convert sidebar to bottom sheet under specific width).
+  - Optimize the sliding menu animation (use `transform: translateX` instead of toggling `right` to keep transitions smooth).
+  - Add subtle shadow/blur tokens shared across components via CSS variables.
+- [ ] **Popups:** Create `.map-popup`, `.popup-cover`, `.popup-actions` classes in CSS and update `map.js` to reference them, ensuring consistent typography and spacing.
+- [ ] **Album Page:**
+  - Use CSS grid template utilities for `.gallery`; define responsive columns with `repeat(auto-fit, minmax(...))`.
+  - Standardize `.gallery-item`, `.gallery-media`, `.video-label`, `.play-icon` styles within CSS to remove inline fallback styling.
+  - Improve loading and error states with shared alert/info classes.
 
 ## 4. JavaScript Structure & Data Handling
 

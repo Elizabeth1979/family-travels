@@ -14,13 +14,7 @@
     --shadow-sm: 0 2px 12px rgba(102, 126, 234, 0.08);
     --shadow-md: 0 8px 30px rgba(102, 126, 234, 0.12);
     --shadow-lg: 0 20px 60px rgba(102, 126, 234, 0.2);
-    --shadow-floating: 0 24px 60px rgba(118, 75, 162, 0.25);
-    --frosted-blur: 18px;
     --focus-color: #667eea;
-    --space-xs: 0.5rem;
-    --space-sm: 0.75rem;
-    --space-md: 1.5rem;
-    --space-lg: 2.5rem;
 }
 
 :where(*, *::before, *::after) {
