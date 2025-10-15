@@ -1,15 +1,18 @@
+.is-hidden {
+    display: none !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
     .album-list {
-        width: 90vw;
-        right: -100%;
+        width: min(90vw, 420px);
     }
 
-    header {
-        padding: 1.5rem;
+    .site-header {
+        padding: 1.5rem 2rem;
     }
 
-    header h1 {
+    .site-brand {
         font-size: 2rem;
     }
 
@@ -21,8 +24,8 @@
     }
 
     .gallery {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-sm);
     }
 
     .album-header h1 {
@@ -30,13 +33,48 @@
     }
 }
 
-@media (max-width: 640px) {
-    header {
-        padding: 1.25rem 1rem;
+@media (max-width: 768px) {
+    .album-list {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100vw;
+        height: min(75vh, 640px);
+        border-radius: 24px 24px 0 0;
+        transform: translateY(110%);
+        box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.25);
+        padding: 2rem 1.5rem 3rem;
     }
 
-    header h1 {
+    .album-list.is-open {
+        transform: translateY(0);
+    }
+
+    .menu-close {
+        top: 1rem;
+        right: 1rem;
+    }
+
+    #map {
+        min-height: 60vh;
+    }
+}
+
+@media (max-width: 640px) {
+    .site-header {
+        padding: 1.25rem 1.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .site-brand {
         font-size: 1.5rem;
+    }
+
+    .site-nav {
+        width: 100%;
+        justify-content: flex-start;
     }
 
     .menu-toggle-fab {
@@ -55,24 +93,23 @@
     }
 
     .gallery {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 0.5rem;
-    }
-
-    .album-list {
-        padding: 1.5rem 1rem;
-        width: 100vw;
-        right: -100%;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--space-xs);
+        margin-top: var(--space-md);
     }
 
     .album-map {
         height: 200px;
     }
+
+    #map {
+        min-height: 320px;
+    }
 }
 
 /* Print styles */
 @media print {
-    header {
+    .site-header {
         background: none;
         color: black;
     }

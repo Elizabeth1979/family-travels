@@ -17,17 +17,20 @@
     <link rel="stylesheet" href="styles/utilities.css">
 </head>
 <body>
-    <header>
-        <h1>Our Family Adventures</h1>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header" role="banner">
+        <div class="site-brand">
+            <h1>Our Family Adventures</h1>
+        </div>
     </header>
 
-    <main class="map-container">
+    <main id="main-content" class="map-container">
         <div class="content-wrapper">
             <!-- Interactive Map -->
             <div id="map" role="region" aria-label="Interactive travel map"></div>
 
             <!-- Menu Toggle Button (Floating) -->
-            <button id="menu-toggle" class="menu-toggle-fab" aria-label="Toggle album menu" aria-expanded="false">
+            <button id="menu-toggle" class="menu-toggle-fab" aria-label="Toggle album menu" aria-expanded="false" aria-controls="album-menu">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M3 12h18M3 6h18M3 18h18"/>
                 </svg>

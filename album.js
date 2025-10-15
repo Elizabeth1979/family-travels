@@ -45,7 +45,9 @@ async function initAlbum() {
 function displayAlbumInfo() {
   document.getElementById("album-title").textContent = currentAlbum.title;
   // Hide date since it duplicates the folder name
-  document.getElementById("album-date").style.display = "none";
+  const dateEl = document.getElementById("album-date");
+  dateEl.textContent = currentAlbum.date || "";
+  dateEl.classList.add("is-hidden");
   document.getElementById("album-description").textContent = currentAlbum.description || "";
   document.title = `${currentAlbum.title} - Family Travel Map`;
 }
@@ -76,7 +78,10 @@ async function loadPhotos() {
   const galleryEl = document.getElementById("gallery");
 
   try {
-    loadingEl.style.display = "block";
+    loadingEl.classList.remove("is-hidden", "error");
+    loadingEl.classList.add("loading");
+    loadingEl.textContent = "Loading photos...";
+    loadingEl.setAttribute("aria-busy", "true");
 
     // Fetch files from Google Apps Script
     const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${currentAlbum.folderId}`);
@@ -90,7 +95,8 @@ async function loadPhotos() {
 
     if (galleryItems.length === 0) {
       galleryEl.innerHTML = '<p class="no-photos">No photos found in this album.</p>';
-      loadingEl.style.display = "none";
+      loadingEl.classList.add("is-hidden");
+      loadingEl.setAttribute("aria-busy", "false");
       return;
     }
 
@@ -112,7 +118,8 @@ async function loadPhotos() {
     renderGallery();
 
     // Hide loading indicator immediately so users see photos faster
-    loadingEl.style.display = "none";
+    loadingEl.classList.add("is-hidden");
+    loadingEl.setAttribute("aria-busy", "false");
 
     // Initialize PhotoSwipe (it will handle dimensions automatically)
     initPhotoSwipe();
@@ -122,9 +129,11 @@ async function loadPhotos() {
     loadImageDimensions();
   } catch (error) {
     console.error("Error loading photos:", error);
+    loadingEl.setAttribute("aria-busy", "false");
+    loadingEl.classList.remove("loading", "is-hidden");
+    loadingEl.classList.add("error");
     loadingEl.textContent =
       "Failed to load photos. Make sure the Google Apps Script is deployed and the folder is accessible.";
-    loadingEl.style.color = "#d32f2f";
   }
 }
 
@@ -230,53 +239,44 @@ function renderGallery() {
     // Let PhotoSwipe calculate dimensions from the actual image
 
     if (isVideo) {
-      // For videos, try to get thumbnail from Google Drive
-      const videoThumbnail = document.createElement("img");
-      videoThumbnail.className = "gallery-media";
-      videoThumbnail.setAttribute("loading", "lazy");
+      galleryItem.classList.add("is-video");
+      galleryItem.setAttribute("data-pswp-type", "video");
 
-      // Extract file ID from Google Drive URL
-      let thumbnailUrl = null;
-      const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        const fileId = fileIdMatch[1];
-        // Use Google Drive thumbnail API (size options: s220, s400, s640, s1600)
-        thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-      }
+      // For videos, try to get thumbnail from Google Drive
+      const thumbnailUrl = extractDriveThumbnail(item.src);
 
       if (thumbnailUrl) {
+        const videoThumbnail = document.createElement("img");
+        videoThumbnail.className = "gallery-media";
+        videoThumbnail.loading = "lazy";
         videoThumbnail.src = thumbnailUrl;
         // Use description as alt text if available, otherwise generate from filename
         videoThumbnail.alt = item.description || generateAltTextFromFilename(item.name) || "Video thumbnail";
 
         // Fallback to gradient placeholder if thumbnail fails to load
         videoThumbnail.onerror = () => {
-          videoThumbnail.style.display = 'none';
-          const placeholder = document.createElement("div");
-          placeholder.className = "gallery-media video-placeholder";
-          galleryItem.insertBefore(placeholder, galleryItem.firstChild);
+          videoThumbnail.replaceWith(createVideoPlaceholder());
         };
+
+        galleryItem.appendChild(videoThumbnail);
       } else {
         // Use gradient placeholder if we can't extract file ID
-        videoThumbnail.style.display = 'none';
-        const placeholder = document.createElement("div");
-        placeholder.className = "gallery-media video-placeholder";
-        galleryItem.appendChild(placeholder);
+        galleryItem.appendChild(createVideoPlaceholder());
       }
 
       // Add video icon/text
       const videoLabel = document.createElement("div");
       videoLabel.className = "video-label";
       videoLabel.textContent = "VIDEO";
+      videoLabel.setAttribute("aria-hidden", "true");
 
       const playIcon = document.createElement("div");
       playIcon.className = "play-icon";
-      playIcon.innerHTML = "▶";
+      playIcon.textContent = "▶";
+      playIcon.setAttribute("aria-hidden", "true");
 
-      galleryItem.appendChild(videoThumbnail);
       galleryItem.appendChild(videoLabel);
       galleryItem.appendChild(playIcon);
-      galleryItem.setAttribute("data-pswp-type", "video");
     } else {
       // Image thumbnail
       const img = document.createElement("img");
@@ -291,6 +291,21 @@ function renderGallery() {
 
     galleryEl.appendChild(galleryItem);
   });
+}
+
+function extractDriveThumbnail(src) {
+  const fileIdMatch = src.match(/[?&]id=([^&]+)/);
+  if (fileIdMatch && fileIdMatch[1]) {
+    return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w400`;
+  }
+  return null;
+}
+
+function createVideoPlaceholder() {
+  const placeholder = document.createElement("div");
+  placeholder.className = "gallery-media video-placeholder";
+  placeholder.setAttribute("aria-hidden", "true");
+  return placeholder;
 }
 
 // Initialize PhotoSwipe lightbox
@@ -333,22 +348,14 @@ function initPhotoSwipe() {
 
       // Create a wrapper div that PhotoSwipe will size correctly
       const wrapper = document.createElement('div');
-      wrapper.style.width = '100%';
-      wrapper.style.height = '100%';
-      wrapper.style.display = 'flex';
-      wrapper.style.alignItems = 'center';
-      wrapper.style.justifyContent = 'center';
-      wrapper.style.background = '#000';
+      wrapper.className = 'pswp-video-wrapper';
 
       // Use an iframe for Google Drive videos with aspect ratio preserved
       const iframe = document.createElement('iframe');
       iframe.src = videoUrl;
-      iframe.frameBorder = '0';
-      iframe.allow = 'autoplay';
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
-      iframe.style.border = 'none';
-      iframe.style.objectFit = 'contain';
+      iframe.className = 'pswp-video-frame';
+      iframe.setAttribute('allow', 'autoplay');
+      iframe.setAttribute('allowfullscreen', 'true');
 
       wrapper.appendChild(iframe);
       content.element = wrapper;
@@ -413,8 +420,10 @@ function generateAltTextFromFilename(filename) {
 // Show error message
 function showError(message) {
   const loadingEl = document.getElementById("loading");
+  loadingEl.setAttribute("aria-busy", "false");
+  loadingEl.classList.remove("loading", "is-hidden");
+  loadingEl.classList.add("error");
   loadingEl.textContent = message;
-  loadingEl.style.color = "#d32f2f";
 }
 
 // Initialize when page loads
