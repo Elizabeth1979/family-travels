@@ -7,7 +7,7 @@ The current implementation delivers core functionality but blocks rendering duri
 - **Defer long network work from first paint**: `initMap()` waits for the album list fetch before drawing the Leaflet map or showing navigation, so the UI appears frozen if the Apps Script is slow. Instantiate the map and menu immediately, then stream album markers as data arrives. Consider rendering the hamburger button and sidebar shell in markup so they are available before data binding. 【F:map.js†L8-L83】【F:index.html†L21-L41】
 - **Add loading skeletons instead of empty states**: Render lightweight placeholders for album cards (CSS gradients instead of JS) while data loads. This gives users feedback during the fetch and improves perceived performance. 【F:index.html†L23-L41】
 - **Cache album metadata**: `map.js` fetches full album data from Drive every load. Cache the JSON response in `localStorage` with a short TTL or ETag so returning users avoid repeated network latency. 【F:map.js†L8-L58】
-- **Move popup inline styling into CSS**: `createPopupContent()` applies many `style.*` assignments per render, generating new style attributes and preventing CSS reuse. Replace with semantic classes (`popup-cover`, `popup-title`, etc.) defined once in `styles.css`. This reduces layout recalculations and keeps styling maintainable. 【F:map.js†L60-L109】【F:styles.css†L1-L200】
+- **Move popup inline styling into CSS**: `createPopupContent()` applies many `style.*` assignments per render, generating new style attributes and preventing CSS reuse. Replace with semantic classes (`popup-cover`, `popup-title`, etc.) defined once in `styles/components.css`. This reduces layout recalculations and keeps styling maintainable. 【F:map.js†L60-L109】【F:styles/components.css】
 - **Avoid attaching global document listeners per render**: `initMenuToggle()` registers a document-level click handler each time `initMap()` runs. Guard against duplicate listeners or move to a delegated handler that toggles based on `open` state. 【F:map.js†L123-L156】
 
 ## Album Page (`album.html` / `album.js`)
@@ -22,8 +22,8 @@ The current implementation delivers core functionality but blocks rendering duri
 - **Return lightweight payloads**: The album listing includes full-size cover URLs (`=s2000`) even though thumbnails are enough for menus and popups. Provide a smaller `coverThumbnail` and let the client opt-in to high-res images lazily. 【F:google-apps-script.js†L100-L118】
 
 ## CSS & Accessibility
-- **Reduce expensive visual effects**: Multiple gradient backgrounds, drop shadows, and blurred overlays cost paint time on mobile. Simplify gradients and reuse tokens (e.g., via utility classes) to cut render cost while keeping visual appeal. 【F:styles.css†L1-L200】
-- **Respect prefers-reduced-motion**: Wrap animated transitions for menus and hover states in `@media (prefers-reduced-motion: no-preference)` to improve accessibility. 【F:styles.css†L65-L131】
+- **Reduce expensive visual effects**: Multiple gradient backgrounds, drop shadows, and blurred overlays cost paint time on mobile. Simplify gradients and reuse tokens (e.g., via utility classes) to cut render cost while keeping visual appeal. 【F:styles/components.css】
+- **Respect prefers-reduced-motion**: Wrap animated transitions for menus and hover states in `@media (prefers-reduced-motion: no-preference)` to improve accessibility. 【F:styles/utilities.css】
 - **Improve semantic structure**: Introduce `<main>` landmarks on album pages and ensure list markup (`<ul>`) wraps album links, aiding screen-reader navigation. Currently, section headers in the gallery are `<div>` wrappers; convert to semantic headings with `role="presentation"` if necessary. 【F:album.html†L24-L59】【F:album.js†L178-L253】
 
 ## Deployment & Loading Strategy

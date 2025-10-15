@@ -11,8 +11,8 @@ This step ensures every developer can run the site locally and has core linting/
 ## 2. CSS Architecture & Cleanup (Preserve Visual Identity)
 
 Here we reorganize the existing CSS so it keeps the current look and animations while becoming easier to navigate, reuse, and extend.
-- [ ] Audit `styles.css` to map existing sections (global, header, map, album) and group rules into logical modules/partials for future maintainability (e.g., using a `styles/` folder with `base.css`, `layout.css`, `components.css`).
-- [ ] Replace the universal `*` reset with a small modern reset applied via `:where` selectors to avoid specificity inflation while keeping layout consistent.
+- [x] Audit `styles.css` to map existing sections (global, header, map, album) and group rules into logical modules/partials for future maintainability (e.g., using a `styles/` folder with `base.css`, `layout.css`, `components.css`).
+- [x] Replace the universal `*` reset with a small modern reset applied via `:where` selectors to avoid specificity inflation while keeping layout consistent.
 - [ ] Ensure CSS variables declared in `:root` are consistently used; remove hard-coded color values that duplicate them.
 - [ ] Normalize spacing and typography scales using utility classes or shared component classes instead of per-element overrides.
 - [ ] Remove inline styles added from JavaScript (e.g., popup content in `map.js`) by introducing dedicated CSS classes and applying them via `classList`.

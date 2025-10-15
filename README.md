@@ -71,7 +71,7 @@ const CONFIG = {
 travels/
 ├── index.html              # Main map page
 ├── album.html              # Album page template
-├── styles.css              # All styles
+├── styles/                 # Modular CSS (base, layout, components, utilities)
 ├── config.js               # Configuration (URLs, folder IDs)
 ├── map.js                  # Map page logic
 ├── album.js                # Album page logic
