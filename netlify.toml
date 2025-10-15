@@ -1,7 +1,8 @@
 # Netlify configuration for Family Travel Map
 
 [build]
-  # No build command needed for static site
+  # Run lint checks before deploying the static site
+  command = "npm run lint"
   publish = "."
 
 # Headers for security and caching

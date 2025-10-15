@@ -14,6 +14,10 @@ An interactive map-based website where each location pin opens an album of photo
 
 ## Setup Instructions
 
+### Local Development
+
+To preview changes locally and run linting before deploys, follow the steps in `docs/local-development.md`. The guide covers both the npm-based workflow (`npm start`) and a lightweight Python fallback server.
+
 ### 1. Configure Google Drive & Apps Script
 
 1. **Create a master "Family Trips" folder** in Google Drive

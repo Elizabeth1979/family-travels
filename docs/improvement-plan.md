@@ -3,10 +3,10 @@
 ## 1. Establish Baseline & Tooling
 
 This step ensures every developer can run the site locally and has core linting/formatting tools in place before tackling deeper cleanup work.
-- [ ] Document a lightweight local setup guide for running the static site with a simple HTTP server (e.g., `npm serve` or `python -m http.server`).
-- [ ] Add a `package.json` (or update existing docs) with convenient scripts: `start` for local preview, `lint:css` and `lint:js` once the tooling is in place.
-- [ ] Introduce a basic automated formatting/linting toolchain (Stylelint for CSS, ESLint + Prettier for JS) configured to respect the existing style choices while flagging cascade/duplication issues.
-- [ ] Wire the lint commands into CI (Netlify build hook or GitHub Actions) after verifying they pass locally.
+- [x] Document a lightweight local setup guide for running the static site with a simple HTTP server (e.g., `npm serve` or `python -m http.server`).
+- [x] Add a `package.json` (or update existing docs) with convenient scripts: `start` for local preview, `lint:css` and `lint:js` once the tooling is in place.
+- [x] Introduce a basic automated formatting/linting toolchain (Stylelint for CSS, ESLint + Prettier for JS) configured to respect the existing style choices while flagging cascade/duplication issues.
+- [x] Wire the lint commands into CI (Netlify build hook or GitHub Actions) after verifying they pass locally.
 
 ## 2. CSS Architecture & Cleanup (Preserve Visual Identity)
 

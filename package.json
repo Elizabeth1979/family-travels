@@ -1,0 +1,21 @@
+{
+  "name": "family-travels-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static travel map and album site",
+  "scripts": {
+    "start": "http-server -c-1 -p 4173 .",
+    "lint": "npm run lint:js && npm run lint:css",
+    "lint:js": "eslint . --ext .js",
+    "lint:css": "stylelint \"**/*.css\"",
+    "format": "prettier --write \"**/*.{js,css,html,json,md}\""
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "http-server": "^14.1.1",
+    "prettier": "^3.2.5",
+    "stylelint": "^16.2.1",
+    "stylelint-config-standard": "^35.0.0"
+  }
+}
