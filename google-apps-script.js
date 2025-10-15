@@ -7,7 +7,7 @@
 const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 
 // Set to true to enable AI-generated alt text for images without descriptions
-const ENABLE_AI_ALT_TEXT = true;
+const ENABLE_AI_ALT_TEXT = false;  // Disabled for performance
 
 // ============================================
 // MAIN FUNCTION
@@ -148,15 +148,19 @@ function listAlbums(masterId) {
       // Generate album ID from folder name
       const albumId = folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-      // Get cover image (first image in folder)
+      // Get cover image (first image in folder) - optimized
       let coverUrl = null;
-      const files = folder.getFiles();
-      while (files.hasNext()) {
-        const file = files.next();
-        if (file.getMimeType().startsWith('image/')) {
-          coverUrl = `https://lh3.googleusercontent.com/d/${file.getId()}=s2000`;
-          break;
+      try {
+        // Use searchFiles for faster filtering - only get first image file
+        const imageQuery = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
+        const imageFiles = DriveApp.searchFiles(imageQuery);
+        if (imageFiles.hasNext()) {
+          const firstImage = imageFiles.next();
+          coverUrl = `https://lh3.googleusercontent.com/d/${firstImage.getId()}=s2000`;
         }
+      } catch (e) {
+        Logger.log('Error getting cover image: ' + e);
+        // Continue without cover
       }
 
       albums.push({

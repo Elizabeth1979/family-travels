@@ -5,9 +5,15 @@ let albums = [];
 // Initialize the map
 async function initMap() {
     try {
-        // Fetch albums data from static file for faster loading
-        // Use albums.json which is kept in sync with Google Drive
-        const response = await fetch('albums.json');
+        // Fetch albums data
+        let response;
+        if (CONFIG.USE_DYNAMIC_ALBUMS && CONFIG.MASTER_FOLDER_ID !== 'YOUR_MASTER_FOLDER_ID_HERE') {
+            // Fetch dynamically from Google Apps Script
+            response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=list&master=${CONFIG.MASTER_FOLDER_ID}`);
+        } else {
+            // Fall back to static albums.json
+            response = await fetch('albums.json');
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
