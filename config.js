@@ -11,7 +11,4 @@ const CONFIG = {
   // Get this from Google Drive URL: https://drive.google.com/drive/folders/[FOLDER_ID]
   // Example: If your URL is https://drive.google.com/drive/folders/1ABC123xyz, use "1ABC123xyz"
   MASTER_FOLDER_ID: "1WMN1Y0Xa8tulV5zvP5tDawXz2uXCDxRL",
-
-  // Set to false to use static albums.json, true to fetch dynamically from Google Drive
-  USE_DYNAMIC_ALBUMS: true,  // Ready to use dynamic albums!
 };
