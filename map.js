@@ -100,6 +100,12 @@ function createPopupContent(album) {
     button.style.textDecoration = 'none';
     button.style.borderRadius = '4px';
     button.style.fontWeight = 'bold';
+
+    // Store album data for instant loading on album page
+    button.addEventListener('click', () => {
+        sessionStorage.setItem('currentAlbum', JSON.stringify(album));
+    });
+
     div.appendChild(button);
 
     return div;
@@ -116,6 +122,11 @@ function populateAlbumList() {
         const link = document.createElement('a');
         link.href = `album.html?id=${album.id}`;
         link.className = 'album-list-item';
+
+        // Store album data for instant loading on album page
+        link.addEventListener('click', () => {
+            sessionStorage.setItem('currentAlbum', JSON.stringify(album));
+        });
 
         const title = document.createElement('div');
         title.textContent = album.title;

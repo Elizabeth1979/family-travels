@@ -14,27 +14,46 @@ async function initAlbum() {
       return;
     }
 
-    // Start fetching albums data immediately (don't wait)
-    const albumsPromise = fetchAlbums();
+    // Try to get album data from sessionStorage (instant!)
+    const cachedAlbumData = sessionStorage.getItem('currentAlbum');
+    if (cachedAlbumData) {
+      try {
+        const cachedAlbum = JSON.parse(cachedAlbumData);
+        if (cachedAlbum.id === albumId) {
+          // Perfect! We have the data already
+          currentAlbum = cachedAlbum;
+          displayAlbumInfo(); // Instant title display!
+          initAlbumMap();
+        }
+      } catch (e) {
+        console.warn('Failed to parse cached album:', e);
+      }
+    }
 
-    // While fetching, set a temporary title from the URL if available
-    // This gives immediate feedback to the user
-    setTemporaryTitle(albumId);
+    // If we don't have cached data, show temporary title
+    if (!currentAlbum) {
+      setTemporaryTitle(albumId);
+    }
 
-    // Now wait for the data
-    const albums = await albumsPromise;
+    // Always fetch fresh data in background (to ensure it's up-to-date)
+    const albums = await fetchAlbums();
 
     // Find the current album
-    currentAlbum = albums.find((a) => a.id === albumId);
+    const freshAlbum = albums.find((a) => a.id === albumId);
 
-    if (!currentAlbum) {
+    if (!freshAlbum) {
       showError("Album not found");
       return;
     }
 
-    // Display album info and initialize map immediately
+    // Update with fresh data (in case anything changed)
+    currentAlbum = freshAlbum;
+
+    // Update display with fresh data
     displayAlbumInfo();
-    initAlbumMap();
+    if (!document.getElementById('album-map').hasChildNodes()) {
+      initAlbumMap();
+    }
 
     // Load photos (this will replace the skeleton loader)
     await loadPhotos();
@@ -58,7 +77,15 @@ function setTemporaryTitle(albumId) {
 
 // Display album header information
 function displayAlbumInfo() {
-  document.getElementById("album-title").textContent = currentAlbum.title;
+  const titleEl = document.getElementById("album-title");
+
+  // Remove loading placeholder if it exists
+  const placeholder = titleEl.querySelector('.loading-placeholder');
+  if (placeholder) {
+    placeholder.remove();
+  }
+
+  titleEl.textContent = currentAlbum.title;
   // Hide date since it duplicates the folder name
   document.getElementById("album-date").style.display = "none";
   document.getElementById("album-description").textContent = currentAlbum.description || "";

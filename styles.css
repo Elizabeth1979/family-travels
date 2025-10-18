@@ -322,6 +322,25 @@ header nav {
     letter-spacing: -1px;
 }
 
+.album-header h1 .loading-placeholder {
+    display: inline-block;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f7fafc 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 .album-date {
     color: var(--text-light);
     font-size: 1.2rem;
