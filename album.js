@@ -14,9 +14,15 @@ async function initAlbum() {
       return;
     }
 
-    // Load albums data from static file for faster loading
-    // We only need the album metadata, not to fetch it dynamically every time
-    const response = await fetch("albums.json");
+    // Load albums data - use same logic as map page
+    let response;
+    if (CONFIG.USE_DYNAMIC_ALBUMS && CONFIG.MASTER_FOLDER_ID !== 'YOUR_MASTER_FOLDER_ID_HERE') {
+      // Fetch dynamically from Google Apps Script
+      response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=list&master=${CONFIG.MASTER_FOLDER_ID}`);
+    } else {
+      // Fall back to static albums.json
+      response = await fetch('albums.json');
+    }
     const albums = await response.json();
 
     // Find the current album
