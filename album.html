@@ -24,23 +24,36 @@
 
     <main class="album-container">
         <!-- Small location map -->
-        <div id="album-map" class="album-map" aria-label="Album location map"></div>
+        <div id="album-map" class="album-map"></div>
 
         <!-- Album header -->
         <div class="album-header">
-            <h1 id="album-title">Loading...</h1>
+            <h1 id="album-title"></h1>
             <p id="album-date" class="album-date"></p>
             <p id="album-description" class="album-description"></p>
         </div>
 
-        <!-- Loading indicator -->
-        <div id="loading" class="loading" role="status" aria-live="polite">
-            Loading photos...
-        </div>
-
         <!-- Photo/Video Grid -->
         <div id="gallery" class="gallery" role="list">
-            <!-- Dynamically populated -->
+            <!-- Skeleton loader (replaced with actual photos when loaded) -->
+            <div class="skeleton-loader">
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+            </div>
         </div>
     </main>
 

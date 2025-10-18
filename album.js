@@ -14,8 +14,15 @@ async function initAlbum() {
       return;
     }
 
-    // Fetch albums data using shared utility
-    const albums = await fetchAlbums();
+    // Start fetching albums data immediately (don't wait)
+    const albumsPromise = fetchAlbums();
+
+    // While fetching, set a temporary title from the URL if available
+    // This gives immediate feedback to the user
+    setTemporaryTitle(albumId);
+
+    // Now wait for the data
+    const albums = await albumsPromise;
 
     // Find the current album
     currentAlbum = albums.find((a) => a.id === albumId);
@@ -25,18 +32,28 @@ async function initAlbum() {
       return;
     }
 
-    // Display album info
+    // Display album info and initialize map immediately
     displayAlbumInfo();
-
-    // Initialize small location map
     initAlbumMap();
 
-    // Load photos from Google Drive
+    // Load photos (this will replace the skeleton loader)
     await loadPhotos();
   } catch (error) {
     console.error("Error loading album:", error);
     showError("Failed to load album");
   }
+}
+
+// Set a temporary title while data is loading
+function setTemporaryTitle(albumId) {
+  // Try to get a friendly name from the album ID
+  // Convert URL-friendly format back to readable text
+  const friendlyName = albumId
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+
+  document.getElementById("album-title").textContent = friendlyName;
+  document.title = `${friendlyName} - Family Travel Map`;
 }
 
 // Display album header information
@@ -50,6 +67,12 @@ function displayAlbumInfo() {
 
 // Initialize the small map showing album location
 function initAlbumMap() {
+  // Check if currentAlbum has coordinates
+  if (!currentAlbum || !currentAlbum.lat || !currentAlbum.lng) {
+    console.warn("Cannot initialize map: missing coordinates");
+    return;
+  }
+
   const albumMap = L.map("album-map", {
     center: [currentAlbum.lat, currentAlbum.lng],
     zoom: 12,
@@ -70,12 +93,9 @@ function initAlbumMap() {
 
 // Load photos from Google Drive via Apps Script
 async function loadPhotos() {
-  const loadingEl = document.getElementById("loading");
   const galleryEl = document.getElementById("gallery");
 
   try {
-    loadingEl.style.display = "block";
-
     // Fetch files from Google Apps Script
     const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${currentAlbum.folderId}`);
 
@@ -88,7 +108,6 @@ async function loadPhotos() {
 
     if (galleryItems.length === 0) {
       galleryEl.innerHTML = '<p class="no-photos">No photos found in this album.</p>';
-      loadingEl.style.display = "none";
       return;
     }
 
@@ -106,11 +125,8 @@ async function loadPhotos() {
       return a.name.localeCompare(b.name);
     });
 
-    // Render gallery
+    // Render gallery (this replaces the skeleton loader)
     renderGallery();
-
-    // Hide loading indicator immediately so users see photos faster
-    loadingEl.style.display = "none";
 
     // Initialize PhotoSwipe (it will handle dimensions automatically)
     initPhotoSwipe();
@@ -120,9 +136,7 @@ async function loadPhotos() {
     loadImageDimensions();
   } catch (error) {
     console.error("Error loading photos:", error);
-    loadingEl.textContent =
-      "Failed to load photos. Make sure the Google Apps Script is deployed and the folder is accessible.";
-    loadingEl.style.color = "#d32f2f";
+    galleryEl.innerHTML = '<p class="error">Failed to load photos. Make sure the Google Apps Script is deployed and the folder is accessible.</p>';
   }
 }
 
@@ -410,9 +424,8 @@ function generateAltTextFromFilename(filename) {
 
 // Show error message
 function showError(message) {
-  const loadingEl = document.getElementById("loading");
-  loadingEl.textContent = message;
-  loadingEl.style.color = "#d32f2f";
+  const galleryEl = document.getElementById("gallery");
+  galleryEl.innerHTML = `<p class="error">${message}</p>`;
 }
 
 // Initialize when page loads
