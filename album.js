@@ -14,16 +14,8 @@ async function initAlbum() {
       return;
     }
 
-    // Load albums data - use same logic as map page
-    let response;
-    if (CONFIG.USE_DYNAMIC_ALBUMS && CONFIG.MASTER_FOLDER_ID !== 'YOUR_MASTER_FOLDER_ID_HERE') {
-      // Fetch dynamically from Google Apps Script
-      response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=list&master=${CONFIG.MASTER_FOLDER_ID}`);
-    } else {
-      // Fall back to static albums.json
-      response = await fetch('albums.json');
-    }
-    const albums = await response.json();
+    // Fetch albums data using shared utility
+    const albums = await fetchAlbums();
 
     // Find the current album
     currentAlbum = albums.find((a) => a.id === albumId);
