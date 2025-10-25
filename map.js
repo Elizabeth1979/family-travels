@@ -6,13 +6,8 @@ let markerLayer;
 // Initialize the map container immediately while album data loads in background
 function initMap() {
     if (!map) {
-        map = L.map('map').setView([32.0, 34.8], 8);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(map);
-
+        map = L.map('map', createMapOptions()).setView([32.0, 34.8], 8);
+        createTileLayer().addTo(map);
         markerLayer = L.layerGroup().addTo(map);
     }
 

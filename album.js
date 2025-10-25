@@ -124,18 +124,15 @@ function initAlbumMap() {
     return;
   }
 
-  const albumMap = L.map("album-map", {
+  const albumMap = L.map("album-map", createMapOptions({
     center: [currentAlbum.lat, currentAlbum.lng],
     zoom: 12,
     scrollWheelZoom: false,
     dragging: false,
     zoomControl: false,
-  });
+  }));
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(albumMap);
+  createTileLayer().addTo(albumMap);
 
   L.marker([currentAlbum.lat, currentAlbum.lng], {
     title: currentAlbum.title,
