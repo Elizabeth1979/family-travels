@@ -11,7 +11,32 @@ function initMap() {
         markerLayer = L.layerGroup().addTo(map);
     }
 
+    // Try to show pins from cache immediately
+    const cachedAlbums = getCachedAlbums();
+    if (cachedAlbums && cachedAlbums.length > 0) {
+        albums = cachedAlbums;
+        renderMarkers();
+        populateAlbumList();
+    }
+
+    // Then fetch fresh data in background
     loadAlbumsAndMarkers();
+}
+
+// Get albums from localStorage cache
+function getCachedAlbums() {
+    const CACHE_KEY = 'family_travel_albums';
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            const { data } = JSON.parse(cached);
+            // Return cached data even if expired - we'll refresh in background
+            return data;
+        }
+    } catch (e) {
+        console.warn('Failed to read cached albums:', e);
+    }
+    return null;
 }
 
 async function loadAlbumsAndMarkers() {
