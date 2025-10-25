@@ -1,59 +1,70 @@
 // Main map page JavaScript
 let map;
 let albums = [];
+let markerLayer;
 
-// Initialize the map
-async function initMap() {
-    try {
-        // Fetch albums data using shared utility
-        albums = await fetchAlbums();
-
-        // Initialize Leaflet map
+// Initialize the map container immediately while album data loads in background
+function initMap() {
+    if (!map) {
         map = L.map('map').setView([32.0, 34.8], 8);
 
-        // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // Add markers for each album
-        const bounds = [];
-        albums.forEach(album => {
-            const marker = L.marker([album.lat, album.lng], {
-                title: album.title,
-                alt: `Location of ${album.title}`
-            }).addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+    }
 
-            // Create popup content
-            const popupContent = createPopupContent(album);
-            marker.bindPopup(popupContent, {
-                maxWidth: 300
-            });
+    loadAlbumsAndMarkers();
+}
 
-            // Add to bounds for auto-fitting
-            bounds.push([album.lat, album.lng]);
-
-            // Make marker keyboard accessible
-            marker.on('keypress', (e) => {
-                if (e.originalEvent.key === 'Enter') {
-                    marker.openPopup();
-                }
-            });
-        });
-
-        // Fit map to show all markers
-        if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [50, 50] });
-        }
-
-        // Populate album list sidebar
+async function loadAlbumsAndMarkers() {
+    try {
+        albums = await fetchAlbums();
+        renderMarkers();
         populateAlbumList();
-
     } catch (error) {
         console.error('Error loading albums:', error);
         document.getElementById('album-list-items').innerHTML =
             '<li class="error">Failed to load albums. Please try again later.</li>';
+    }
+}
+
+function renderMarkers() {
+    if (!map || !markerLayer) return;
+
+    markerLayer.clearLayers();
+    const bounds = [];
+
+    albums.forEach(album => {
+        if (typeof album.lat !== 'number' || typeof album.lng !== 'number') {
+            return;
+        }
+
+        const marker = L.marker([album.lat, album.lng], {
+            title: album.title,
+            alt: `Location of ${album.title}`
+        });
+
+        marker.addTo(markerLayer);
+
+        const popupContent = createPopupContent(album);
+        marker.bindPopup(popupContent, {
+            maxWidth: 300
+        });
+
+        bounds.push([album.lat, album.lng]);
+
+        marker.on('keypress', (e) => {
+            if (e.originalEvent.key === 'Enter') {
+                marker.openPopup();
+            }
+        });
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
     }
 }
 
