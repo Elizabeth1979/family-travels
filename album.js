@@ -14,16 +14,24 @@ async function initAlbum() {
       return;
     }
 
+    // Kick off fresh fetch right away so we can do work while it loads
+    const albumsPromise = fetchAlbums();
+    let photosPromise = Promise.resolve();
+    let usedCachedAlbum = false;
+
     // Try to get album data from sessionStorage (instant!)
     const cachedAlbumData = sessionStorage.getItem('currentAlbum');
     if (cachedAlbumData) {
       try {
         const cachedAlbum = JSON.parse(cachedAlbumData);
         if (cachedAlbum.id === albumId) {
-          // Perfect! We have the data already
           currentAlbum = cachedAlbum;
-          displayAlbumInfo(); // Instant title display!
+          usedCachedAlbum = true;
+          displayAlbumInfo();
           initAlbumMap();
+          if (cachedAlbum.folderId) {
+            photosPromise = loadPhotos(currentAlbum);
+          }
         }
       } catch (e) {
         console.warn('Failed to parse cached album:', e);
@@ -35,10 +43,8 @@ async function initAlbum() {
       setTemporaryTitle(albumId);
     }
 
-    // Always fetch fresh data in background (to ensure it's up-to-date)
-    const albums = await fetchAlbums();
+    const albums = await albumsPromise;
 
-    // Find the current album
     const freshAlbum = albums.find((a) => a.id === albumId);
 
     if (!freshAlbum) {
@@ -46,8 +52,16 @@ async function initAlbum() {
       return;
     }
 
-    // Update with fresh data (in case anything changed)
+    const previousFolderId = currentAlbum ? currentAlbum.folderId : null;
+    const hadFolderId = Boolean(previousFolderId);
+
     currentAlbum = freshAlbum;
+
+    try {
+      sessionStorage.setItem('currentAlbum', JSON.stringify(currentAlbum));
+    } catch (e) {
+      console.warn('Unable to cache album in sessionStorage:', e);
+    }
 
     // Update display with fresh data
     displayAlbumInfo();
@@ -55,8 +69,18 @@ async function initAlbum() {
       initAlbumMap();
     }
 
-    // Load photos (this will replace the skeleton loader)
-    await loadPhotos();
+    const shouldReloadPhotos =
+      !usedCachedAlbum ||
+      !hadFolderId ||
+      previousFolderId !== currentAlbum.folderId;
+
+    if (shouldReloadPhotos) {
+      photosPromise = loadPhotos(currentAlbum);
+    } else if (previousFolderId && previousFolderId !== currentAlbum.folderId) {
+      photosPromise = photosPromise.catch(() => {}).then(() => loadPhotos(currentAlbum));
+    }
+
+    await photosPromise;
   } catch (error) {
     console.error("Error loading album:", error);
     showError("Failed to load album");
@@ -119,12 +143,17 @@ function initAlbumMap() {
 }
 
 // Load photos from Google Drive via Apps Script
-async function loadPhotos() {
+async function loadPhotos(albumData = currentAlbum) {
   const galleryEl = document.getElementById("gallery");
 
   try {
+    if (!albumData || !albumData.folderId) {
+      console.warn("Skipping photo load due to missing folder ID");
+      return;
+    }
+
     // Fetch files from Google Apps Script
-    const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${currentAlbum.folderId}`);
+    const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${albumData.folderId}`);
 
     if (!response.ok) {
       throw new Error("Failed to fetch photos from Google Drive");
@@ -286,7 +315,7 @@ function renderGallery() {
       if (thumbnailUrl) {
         videoThumbnail.src = thumbnailUrl;
         // Use description as alt text if available, otherwise generate from filename
-        videoThumbnail.alt = item.description || generateAltTextFromFilename(item.name) || "Video thumbnail";
+        videoThumbnail.alt = item.description || generateAltTextFromFilename(item.name, currentAlbum.title) || "Video thumbnail";
 
         // Fallback to gradient placeholder if thumbnail fails to load
         videoThumbnail.onerror = () => {
@@ -321,7 +350,7 @@ function renderGallery() {
       const img = document.createElement("img");
       img.src = item.src;
       // Use description as alt text if available, otherwise generate from filename
-      img.alt = item.description || generateAltTextFromFilename(item.name) || "Photo";
+      img.alt = item.description || generateAltTextFromFilename(item.name, currentAlbum.title) || "Photo";
       img.className = "gallery-media";
       img.setAttribute("loading", "lazy");
 
@@ -419,7 +448,7 @@ function initPhotoSwipe() {
 }
 
 // Generate readable alt text from filename
-function generateAltTextFromFilename(filename) {
+function generateAltTextFromFilename(filename, albumTitle = currentAlbum?.title || "") {
   if (!filename) return "";
 
   // Remove file extension
@@ -441,7 +470,9 @@ function generateAltTextFromFilename(filename) {
   name = name.replace(/\s+/g, " ").trim();
 
   // If nothing left, return generic text
-  if (!name) return "Photo from " + currentAlbum.title;
+  if (!name) {
+    return albumTitle ? `Photo from ${albumTitle}` : "Photo";
+  }
 
   // Capitalize first letter
   name = name.charAt(0).toUpperCase() + name.slice(1);
