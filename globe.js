@@ -1,7 +1,7 @@
 // Globe.GL implementation for 3D interactive globe
 let globeInstance = null;
 let globeMarkers = [];
-let isRotating = true;
+let isRotating = false;  // Start with rotation disabled for better zoom experience
 
 // Initialize Globe.GL
 async function initGlobeMap() {
@@ -33,13 +33,16 @@ async function initGlobeMap() {
 
     // Enable rotation controls
     const controls = globeInstance.controls();
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.1;
+    controls.enableDamping = false;  // Disable damping for more responsive controls
     controls.rotateSpeed = 0.5;
-    controls.minDistance = 200;
+    controls.enableZoom = true;  // Explicitly enable zoom
+    controls.zoomSpeed = 3.0;  // Even faster zoom
+    controls.minDistance = 101;  // Allow very close zoom for street-level view
     controls.maxDistance = 800;
-    controls.autoRotate = true;
+    controls.autoRotate = false;  // Disable auto-rotate by default so zoom works better
     controls.autoRotateSpeed = 0.5;
+
+    console.log('Zoom controls enabled - use mouse wheel or pinch to zoom');
 
     // Set initial camera position
     globeInstance.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 0);
@@ -121,76 +124,70 @@ function renderGlobeMarkers() {
 
     console.log('Rendering globe markers for', albums.length, 'albums');
 
-    // Prepare points data for Globe.GL
+    // Prepare points data for Globe.GL with custom HTML pins
     const pointsData = albums
         .filter(album => typeof album.lat === 'number' && typeof album.lng === 'number')
         .map(album => ({
             lat: album.lat,
             lng: album.lng,
-            size: 0.5,
-            color: '#FF6B6B',
             album: album
         }));
 
-    // Add points layer
+    // Add custom HTML markers as pins that scale with zoom
     globeInstance
-        .pointsData(pointsData)
-        .pointAltitude(0.01)
-        .pointRadius('size')
-        .pointColor('color')
-        .pointLabel(d => `
-            <div style="
-                background: white;
-                padding: 12px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                max-width: 200px;
-            ">
-                <strong style="font-size: 14px; color: #667eea;">${d.album.title}</strong>
-                ${d.album.date ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${d.album.date}</div>` : ''}
-            </div>
-        `)
-        .onPointClick(point => {
-            // Store album data and navigate
-            sessionStorage.setItem('currentAlbum', JSON.stringify(point.album));
-            window.location.href = `album.html?id=${point.album.id}`;
-        })
-        .onPointHover(point => {
-            // Change cursor on hover
-            document.body.style.cursor = point ? 'pointer' : 'default';
-        });
+        .htmlElementsData(pointsData)
+        .htmlElement(d => {
+            const el = document.createElement('div');
+            el.className = 'globe-pin';
+            el.innerHTML = `
+                <svg width="30" height="40" viewBox="0 0 24 32" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+                    <path d="M12 0C7.03 0 3 4.03 3 9c0 6.75 9 21 9 21s9-14.25 9-21c0-4.97-4.03-9-9-9z"
+                          fill="#DC2626"
+                          stroke="#991B1B"
+                          stroke-width="1"/>
+                    <circle cx="12" cy="9" r="4" fill="white" opacity="0.9"/>
+                </svg>
+            `;
+            el.style.cursor = 'pointer';
+            el.style.pointerEvents = 'auto';
+            el.style.transition = 'transform 0.2s ease-out';
 
-    // Add labels layer for better visibility
-    const labelsData = albums
-        .filter(album => typeof album.lat === 'number' && typeof album.lng === 'number')
-        .map(album => ({
-            lat: album.lat,
-            lng: album.lng,
-            text: album.title,
-            size: 0.8,
-            color: '#667eea',
-            album: album
-        }));
+            // Add hover tooltip
+            el.title = `${d.album.title}${d.album.date ? ' - ' + d.album.date : ''}`;
 
-    globeInstance
-        .labelsData(labelsData)
-        .labelLat('lat')
-        .labelLng('lng')
-        .labelText('text')
-        .labelSize('size')
-        .labelColor('color')
-        .labelDotRadius(0.5)
-        .labelAltitude(0.02)
-        .labelResolution(2)
-        .onLabelClick(label => {
-            // Store album data and navigate
-            sessionStorage.setItem('currentAlbum', JSON.stringify(label.album));
-            window.location.href = `album.html?id=${label.album.id}`;
+            // Click handler
+            el.addEventListener('click', () => {
+                sessionStorage.setItem('currentAlbum', JSON.stringify(d.album));
+                window.location.href = `album.html?id=${d.album.id}`;
+            });
+
+            return el;
         })
-        .onLabelHover(label => {
-            // Change cursor on hover
-            document.body.style.cursor = label ? 'pointer' : 'default';
+        // Clear old point markers
+        .pointsData([])
+        .labelsData([]);
+
+    // Add dynamic scaling based on camera distance
+    const controls = globeInstance.controls();
+    const camera = globeInstance.camera();
+
+    function updatePinSizes() {
+        const distance = camera.position.length();
+        // Scale pins inversely with distance: closer = smaller pins
+        // At max distance (800): scale = 1.0
+        // At min distance (101): scale = 0.15
+        const scale = Math.max(0.15, Math.min(1.0, (distance - 101) / (800 - 101) * 0.85 + 0.15));
+
+        document.querySelectorAll('.globe-pin').forEach(pin => {
+            pin.style.transform = `scale(${scale})`;
         });
+    }
+
+    // Update pin sizes on zoom/pan
+    controls.addEventListener('change', updatePinSizes);
+
+    // Initial size update
+    updatePinSizes();
 
     // Auto-rotate to show all markers
     if (pointsData.length > 0) {
