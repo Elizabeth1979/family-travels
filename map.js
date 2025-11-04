@@ -1,26 +1,134 @@
 // Main map page JavaScript
 let map;
 let albums = [];
-let markerLayer;
+let markers = [];
+let currentMapType = 'globe'; // 'globe' (Globe.GL), 'enhanced' (MapLibre), or 'accessible' (Leaflet)
+let mapState = {
+    center: { lat: 20, lng: 0 },
+    zoom: 2
+};
 
 // Initialize the map container immediately while album data loads in background
-function initMap() {
-    if (!map) {
-        map = L.map('map', createMapOptions()).setView([32.0, 34.8], 8);
-        createTileLayer().addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
+async function initMap() {
+    if (map) return; // Already initialized
+
+    // Get user preference
+    currentMapType = getMapPreference();
+    console.log('Initializing map with type:', currentMapType);
+
+    // Update toggle UI to match preference
+    updateToggleUI(currentMapType);
+
+    try {
+        if (currentMapType === 'globe') {
+            await initGlobeMap();
+        } else if (currentMapType === 'accessible') {
+            await initLeafletMap();
+        } else {
+            await initMapLibreMap();
+        }
+    } catch (error) {
+        console.error('Failed to initialize preferred map, falling back:', error);
+        // Fallback to Leaflet if Globe or MapLibre fails
+        if (currentMapType === 'globe' || currentMapType === 'enhanced') {
+            currentMapType = 'accessible';
+            await initLeafletMap();
+        }
     }
 
     // Try to show pins from cache immediately
     const cachedAlbums = getCachedAlbums();
     if (cachedAlbums && cachedAlbums.length > 0) {
         albums = cachedAlbums;
-        renderMarkers();
         populateAlbumList();
+        renderMarkers();
     }
 
     // Then fetch fresh data in background
     loadAlbumsAndMarkers();
+}
+
+// Initialize MapLibre GL (3D Enhanced) map
+async function initMapLibreMap() {
+    console.log('Initializing MapLibre GL map');
+
+    if (typeof maplibregl === 'undefined') {
+        throw new Error('MapLibre GL not loaded');
+    }
+
+    const options = createMapLibreOptions();
+    console.log('MapLibre options:', options);
+
+    map = new maplibregl.Map(options);
+    console.log('MapLibre map instance created:', map);
+
+    // Add navigation controls (zoom, rotation, pitch)
+    map.addControl(new maplibregl.NavigationControl({
+        visualizePitch: true,
+        showZoom: true,
+        showCompass: true
+    }), 'top-right');
+
+    // Note: MapStyleControl removed - using map type toggle instead
+    // All demo tiles point to same style anyway
+
+    // Wait for map to load before adding features
+    map.on('load', () => {
+        console.log('MapLibre map loaded successfully');
+
+        // Enable 3D terrain by default (may not work with demo tiles)
+        try {
+            if (map.getSource('terrain')) {
+                map.setTerrain({
+                    source: 'terrain',
+                    exaggeration: 2.0
+                });
+                console.log('3D terrain enabled');
+            }
+        } catch (error) {
+            console.log('Terrain not available with current style');
+        }
+
+        // Render markers after a short delay
+        setTimeout(() => {
+            if (albums.length > 0) {
+                renderMarkers();
+            }
+        }, 300);
+    });
+}
+
+// Initialize Leaflet (Accessible) map
+async function initLeafletMap() {
+    console.log('Initializing Leaflet map');
+
+    // Load Leaflet if not already loaded
+    await loadLeaflet();
+
+    if (typeof L === 'undefined') {
+        throw new Error('Leaflet failed to load');
+    }
+
+    // Create map with Leaflet
+    const options = createLeafletMapOptions({
+        center: [mapState.center.lat, mapState.center.lng],
+        zoom: mapState.zoom
+    });
+
+    map = L.map('map', options);
+
+    // Add tile layer
+    createTileLayer().addTo(map);
+
+    // Add zoom control
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    console.log('Leaflet map initialized successfully');
+
+    // Render markers immediately
+    if (albums.length > 0) {
+        renderMarkers();
+    }
 }
 
 // Get albums from localStorage cache
@@ -52,39 +160,96 @@ async function loadAlbumsAndMarkers() {
 }
 
 function renderMarkers() {
-    if (!map || !markerLayer) return;
+    if (currentMapType === 'globe') {
+        // Globe uses its own rendering system
+        renderGlobeMarkers();
+    } else {
+        if (!map) return;
 
-    markerLayer.clearLayers();
-    const bounds = [];
+        // Clear existing markers
+        markers.forEach(marker => marker.remove());
+        markers = [];
+
+        if (currentMapType === 'enhanced') {
+            renderMapLibreMarkers();
+        } else {
+            renderLeafletMarkers();
+        }
+    }
+}
+
+// Render markers for MapLibre GL
+function renderMapLibreMarkers() {
+    const bounds = new maplibregl.LngLatBounds();
 
     albums.forEach(album => {
         if (typeof album.lat !== 'number' || typeof album.lng !== 'number') {
             return;
         }
 
-        const marker = L.marker([album.lat, album.lng], {
-            title: album.title,
-            alt: `Location of ${album.title}`
-        });
+        // Create custom marker element
+        const el = createMarkerElement('#FF6B6B');
 
-        marker.addTo(markerLayer);
-
+        // Create popup content
         const popupContent = createPopupContent(album);
-        marker.bindPopup(popupContent, {
-            maxWidth: 300
-        });
 
-        bounds.push([album.lat, album.lng]);
+        // Create popup
+        const popup = new maplibregl.Popup({
+            offset: 25,
+            maxWidth: '300px',
+            className: 'custom-popup'
+        }).setDOMContent(popupContent);
 
-        marker.on('keypress', (e) => {
-            if (e.originalEvent.key === 'Enter') {
-                marker.openPopup();
-            }
-        });
+        // Create marker
+        const marker = new maplibregl.Marker({
+            element: el,
+            anchor: 'bottom'
+        })
+            .setLngLat([album.lng, album.lat])
+            .setPopup(popup)
+            .addTo(map);
+
+        markers.push(marker);
+        bounds.extend([album.lng, album.lat]);
     });
 
-    if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
+    // Fit map to markers if any exist
+    if (albums.length > 0) {
+        map.fitBounds(bounds, {
+            padding: { top: 50, bottom: 50, left: 50, right: 50 },
+            pitch: 40,
+            bearing: 0,
+            duration: 1500
+        });
+    }
+}
+
+// Render markers for Leaflet
+function renderLeafletMarkers() {
+    const bounds = L.latLngBounds();
+
+    albums.forEach(album => {
+        if (typeof album.lat !== 'number' || typeof album.lng !== 'number') {
+            return;
+        }
+
+        // Create popup content
+        const popupContent = createPopupContent(album);
+
+        // Create marker
+        const marker = L.marker([album.lat, album.lng])
+            .bindPopup(popupContent)
+            .addTo(map);
+
+        markers.push(marker);
+        bounds.extend([album.lat, album.lng]);
+    });
+
+    // Fit map to markers if any exist
+    if (albums.length > 0) {
+        map.fitBounds(bounds, {
+            padding: [50, 50]
+        });
     }
 }
 
@@ -94,50 +259,45 @@ function createPopupContent(album) {
     div.className = 'popup-content';
 
     if (album.cover) {
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'popup-image-container';
+
         const img = document.createElement('img');
         img.src = album.cover;
         img.alt = `Cover photo for ${album.title}`;
         img.className = 'popup-cover';
-        img.style.width = '100%';
-        img.style.height = '150px';
-        img.style.objectFit = 'cover';
-        img.style.marginBottom = '10px';
-        img.style.borderRadius = '4px';
-        div.appendChild(img);
+
+        imgContainer.appendChild(img);
+        div.appendChild(imgContainer);
     }
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'popup-text-content';
 
     const title = document.createElement('h3');
     title.textContent = album.title;
-    title.style.margin = '0 0 10px 0';
-    div.appendChild(title);
+    title.className = 'popup-title';
+    contentDiv.appendChild(title);
 
     if (album.date) {
         const date = document.createElement('p');
         date.textContent = album.date;
-        date.style.margin = '0 0 10px 0';
-        date.style.color = '#666';
-        date.style.fontSize = '14px';
-        div.appendChild(date);
+        date.className = 'popup-date';
+        contentDiv.appendChild(date);
     }
 
     const button = document.createElement('a');
     button.href = `album.html?id=${album.id}`;
     button.textContent = 'Open Album';
     button.className = 'open-album-btn';
-    button.style.display = 'inline-block';
-    button.style.padding = '8px 16px';
-    button.style.backgroundColor = '#4CAF50';
-    button.style.color = 'white';
-    button.style.textDecoration = 'none';
-    button.style.borderRadius = '4px';
-    button.style.fontWeight = 'bold';
 
     // Store album data for instant loading on album page
     button.addEventListener('click', () => {
         sessionStorage.setItem('currentAlbum', JSON.stringify(album));
     });
 
-    div.appendChild(button);
+    contentDiv.appendChild(button);
+    div.appendChild(contentDiv);
 
     return div;
 }
@@ -204,8 +364,234 @@ function initMenuToggle() {
     }
 }
 
+// Change map style dynamically
+function changeMapStyle(styleType) {
+    if (!map) return;
+
+    console.log('Changing map style to:', styleType);
+
+    // Get current map state
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    const pitch = map.getPitch();
+    const bearing = map.getBearing();
+
+    // Update the style
+    map.setStyle(createMapStyle(styleType));
+
+    // Wait for style to load, then restore state and markers
+    map.once('style.load', () => {
+        console.log('New style loaded');
+
+        // Re-enable terrain
+        try {
+            map.setTerrain({
+                source: 'terrain',
+                exaggeration: 2.0
+            });
+        } catch (error) {
+            console.error('Failed to re-enable terrain:', error);
+        }
+
+        // Restore camera position
+        map.jumpTo({
+            center: center,
+            zoom: zoom,
+            pitch: pitch,
+            bearing: bearing
+        });
+
+        // Re-render markers after a short delay
+        setTimeout(() => {
+            if (albums.length > 0) {
+                renderMarkers();
+            }
+        }, 300);
+    });
+}
+
+// Switch between map types (Enhanced vs Accessible)
+async function switchMapType(newType) {
+    if (newType === currentMapType) return; // Already using this type
+
+    console.log('Switching map type from', currentMapType, 'to', newType);
+
+    // Show loading indicator
+    showLoading('Switching map...');
+
+    // Save current map state
+    saveCurrentMapState();
+
+    // Destroy current map
+    destroyCurrentMap();
+
+    // Update current type
+    currentMapType = newType;
+    saveMapPreference(newType);
+
+    // Initialize new map
+    try {
+        if (newType === 'globe') {
+            await initGlobeMap();
+        } else if (newType === 'accessible') {
+            await initLeafletMap();
+        } else {
+            await initMapLibreMap();
+        }
+
+        // Render markers
+        if (albums.length > 0) {
+            renderMarkers();
+        }
+
+        // Update toggle UI
+        updateToggleUI(newType);
+
+        // Announce to screen readers
+        const mapTypeName = newType === 'globe' ? '3D globe' :
+                           newType === 'accessible' ? 'accessible 2D map' :
+                           '3D enhanced map';
+        announceToScreenReader(`Now viewing ${mapTypeName}`);
+
+        hideLoading();
+    } catch (error) {
+        console.error('Failed to switch map type:', error);
+        hideLoading();
+        alert('Failed to switch map type. Please try again.');
+    }
+}
+
+// Save current map state before destroying
+function saveCurrentMapState() {
+    if (currentMapType === 'globe') {
+        // Globe doesn't need state saving for now
+        // Could save camera position in future if needed
+        return;
+    }
+
+    if (!map) return;
+
+    try {
+        if (currentMapType === 'enhanced' && typeof maplibregl !== 'undefined') {
+            const center = map.getCenter();
+            mapState.center = { lat: center.lat, lng: center.lng };
+            mapState.zoom = map.getZoom();
+        } else if (currentMapType === 'accessible' && typeof L !== 'undefined') {
+            const center = map.getCenter();
+            mapState.center = { lat: center.lat, lng: center.lng };
+            mapState.zoom = map.getZoom();
+        }
+    } catch (error) {
+        console.warn('Failed to save map state:', error);
+    }
+}
+
+// Destroy current map instance
+function destroyCurrentMap() {
+    if (currentMapType === 'globe') {
+        // Destroy globe using its own cleanup function
+        if (typeof destroyGlobe === 'function') {
+            destroyGlobe();
+        }
+        return;
+    }
+
+    if (!map) return;
+
+    try {
+        // Clear markers first
+        markers.forEach(marker => marker.remove());
+        markers = [];
+
+        // Remove map
+        map.remove();
+        map = null;
+    } catch (error) {
+        console.warn('Failed to destroy map:', error);
+    }
+}
+
+// Update toggle UI to reflect current map type
+function updateToggleUI(mapType) {
+    const buttons = document.querySelectorAll('.map-type-btn');
+    buttons.forEach(btn => {
+        const btnType = btn.getAttribute('data-map-type');
+        const isActive = btnType === mapType;
+
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-checked', isActive.toString());
+    });
+}
+
+// Show loading indicator
+function showLoading(message = 'Loading map...') {
+    const loading = document.getElementById('map-loading');
+    const loadingText = loading.querySelector('.loading-text');
+
+    if (loadingText) {
+        loadingText.textContent = message;
+    }
+
+    loading.classList.remove('hidden');
+}
+
+// Hide loading indicator
+function hideLoading() {
+    const loading = document.getElementById('map-loading');
+    loading.classList.add('hidden');
+}
+
+// Announce to screen readers
+function announceToScreenReader(message) {
+    const announcement = document.createElement('div');
+    announcement.setAttribute('role', 'status');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.className = 'sr-only';
+    announcement.textContent = message;
+
+    document.body.appendChild(announcement);
+
+    // Remove after announcement
+    setTimeout(() => {
+        document.body.removeChild(announcement);
+    }, 1000);
+}
+
+// Initialize map type toggle
+function initMapTypeToggle() {
+    const toggleButtons = document.querySelectorAll('.map-type-btn');
+
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const newType = btn.getAttribute('data-map-type');
+            switchMapType(newType);
+        });
+
+        // Keyboard accessibility
+        btn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const newType = btn.getAttribute('data-map-type');
+                switchMapType(newType);
+            }
+        });
+    });
+
+    // Open album list button
+    const openAlbumBtn = document.getElementById('open-album-list');
+    if (openAlbumBtn) {
+        openAlbumBtn.addEventListener('click', () => {
+            const menuToggle = document.getElementById('menu-toggle');
+            if (menuToggle) {
+                menuToggle.click();
+            }
+        });
+    }
+}
+
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     initMenuToggle();
+    initMapTypeToggle();
 });
