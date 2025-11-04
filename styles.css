@@ -63,6 +63,19 @@ header::before {
     pointer-events: none;
 }
 
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.header-text {
+    flex: 1;
+}
+
 header h1 {
     font-size: 2.5rem;
     font-weight: 700;
@@ -387,6 +400,48 @@ header nav {
     gap: 0;
     overflow: hidden;
     backdrop-filter: blur(10px);
+}
+
+/* Globe Rotation Control */
+.rotation-toggle {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: white;
+    flex-shrink: 0;
+}
+
+.rotation-toggle:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+}
+
+.rotation-toggle.rotating {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.rotation-toggle.rotating:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.rotation-toggle svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.rotation-toggle.hidden {
+    display: none;
 }
 
 .map-type-btn {
@@ -972,6 +1027,15 @@ header nav {
         font-size: 2rem;
     }
 
+    .header-content {
+        gap: 1rem;
+    }
+
+    .rotation-toggle {
+        width: 48px;
+        height: 48px;
+    }
+
     .menu-toggle-fab {
         width: 60px;
         height: 60px;
@@ -995,8 +1059,22 @@ header nav {
         padding: 1.25rem 1rem;
     }
 
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
     header h1 {
         font-size: 1.5rem;
+    }
+
+    .rotation-toggle {
+        position: absolute;
+        top: 1.25rem;
+        right: 1rem;
+        width: 44px;
+        height: 44px;
     }
 
     .menu-toggle-fab {

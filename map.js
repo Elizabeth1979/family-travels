@@ -587,6 +587,16 @@ function initMapTypeToggle() {
             }
         });
     }
+
+    // Rotation toggle button for globe
+    const rotationToggle = document.getElementById('rotation-toggle');
+    if (rotationToggle) {
+        rotationToggle.addEventListener('click', () => {
+            if (typeof toggleGlobeRotation === 'function') {
+                toggleGlobeRotation();
+            }
+        });
+    }
 }
 
 // Initialize map when page loads

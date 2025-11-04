@@ -19,8 +19,22 @@
     <a href="#map" class="skip-link">View Map</a>
 
     <header>
-        <h1>Our Family Adventures</h1>
-        <p class="map-intro">Explore our travels on the interactive map below, or <button id="open-album-list" class="link-button">view the album list</button> for accessible navigation.</p>
+        <div class="header-content">
+            <div class="header-text">
+                <h1>Our Family Adventures</h1>
+                <p class="map-intro">Explore our travels on the interactive map below, or <button id="open-album-list" class="link-button">view the album list</button> for accessible navigation.</p>
+            </div>
+            <!-- Globe Rotation Control (only visible on globe view) -->
+            <button id="rotation-toggle" class="rotation-toggle hidden" aria-label="Stop globe rotation" title="Stop rotation">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
+                    <rect x="6" y="4" width="4" height="16" rx="1"/>
+                    <rect x="14" y="4" width="4" height="16" rx="1"/>
+                </svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="play-icon hidden">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </button>
+        </div>
     </header>
 
     <main class="map-container">

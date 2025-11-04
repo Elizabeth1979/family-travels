@@ -1,6 +1,7 @@
 // Globe.GL implementation for 3D interactive globe
 let globeInstance = null;
 let globeMarkers = [];
+let isRotating = true;
 
 // Initialize Globe.GL
 async function initGlobeMap() {
@@ -45,6 +46,9 @@ async function initGlobeMap() {
 
     console.log('Globe.GL initialized successfully');
 
+    // Show rotation toggle button
+    showRotationToggle();
+
     // Handle window resize
     window.addEventListener('resize', () => {
         if (globeInstance && currentMapType === 'globe') {
@@ -53,6 +57,62 @@ async function initGlobeMap() {
                 .height(container.clientHeight);
         }
     });
+}
+
+// Toggle globe rotation
+function toggleGlobeRotation() {
+    if (!globeInstance) return;
+
+    const controls = globeInstance.controls();
+    if (!controls) return;
+
+    isRotating = !isRotating;
+    controls.autoRotate = isRotating;
+
+    // Update button UI
+    updateRotationToggleUI();
+
+    console.log('Globe rotation:', isRotating ? 'enabled' : 'disabled');
+}
+
+// Update rotation toggle button UI
+function updateRotationToggleUI() {
+    const toggleBtn = document.getElementById('rotation-toggle');
+    if (!toggleBtn) return;
+
+    const pauseIcon = toggleBtn.querySelector('.pause-icon');
+    const playIcon = toggleBtn.querySelector('.play-icon');
+
+    if (isRotating) {
+        toggleBtn.classList.add('rotating');
+        toggleBtn.setAttribute('aria-label', 'Stop globe rotation');
+        toggleBtn.setAttribute('title', 'Stop rotation');
+        pauseIcon.classList.remove('hidden');
+        playIcon.classList.add('hidden');
+    } else {
+        toggleBtn.classList.remove('rotating');
+        toggleBtn.setAttribute('aria-label', 'Start globe rotation');
+        toggleBtn.setAttribute('title', 'Start rotation');
+        pauseIcon.classList.add('hidden');
+        playIcon.classList.remove('hidden');
+    }
+}
+
+// Show rotation toggle button
+function showRotationToggle() {
+    const toggleBtn = document.getElementById('rotation-toggle');
+    if (toggleBtn) {
+        toggleBtn.classList.remove('hidden');
+        updateRotationToggleUI();
+    }
+}
+
+// Hide rotation toggle button
+function hideRotationToggle() {
+    const toggleBtn = document.getElementById('rotation-toggle');
+    if (toggleBtn) {
+        toggleBtn.classList.add('hidden');
+    }
 }
 
 // Render markers on the globe
@@ -163,6 +223,9 @@ function destroyGlobe() {
             globeInstance.labelsData([]);
         }
 
+        // Hide rotation toggle button
+        hideRotationToggle();
+
         // Clear the container completely
         const container = document.getElementById('map');
         if (container) {
@@ -177,6 +240,7 @@ function destroyGlobe() {
 
         globeInstance = null;
         globeMarkers = [];
+        isRotating = true; // Reset to default
 
         console.log('Globe destroyed successfully');
     } catch (error) {
@@ -187,6 +251,7 @@ function destroyGlobe() {
         if (container) {
             container.innerHTML = '';
         }
+        hideRotationToggle();
     }
 }
 
