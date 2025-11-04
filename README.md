@@ -16,7 +16,11 @@ An interactive map-based website where each location pin opens an album of photo
 
 ### Local Development
 
-To preview changes locally and run linting before deploys, follow the steps in `docs/local-development.md`. The guide covers both the npm-based workflow (`npm start`) and a lightweight Python fallback server.
+To preview changes locally and run linting before deploys, follow the steps in [docs/local-development.md](docs/local-development.md). The guide covers both the npm-based workflow (`npm start`) and a lightweight Python fallback server.
+
+### Development Workflow
+
+For Git branching strategies, commit practices, and collaboration guidelines, see [docs/git-workflow.md](docs/git-workflow.md).
 
 ### 1. Configure Google Drive & Apps Script
 
