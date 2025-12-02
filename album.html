@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,19 +8,42 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin=""/>
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
     <!-- PhotoSwipe CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
 
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <header>
-        <nav>
-            <a href="index.html" class="back-link">&larr; Back to Map</a>
-        </nav>
+        <div class="header-content">
+            <nav>
+                <a href="index.html" class="back-link">&larr; Back to Map</a>
+            </nav>
+            <div class="header-controls">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+                    <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" style="display: none;">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </header>
 
     <main class="album-container">
@@ -73,7 +97,8 @@
                     <div class="pswp__counter"></div>
                     <button class="pswp__button pswp__button--close" title="Close (Esc)" aria-label="Close"></button>
                     <button class="pswp__button pswp__button--zoom" title="Zoom in/out" aria-label="Zoom"></button>
-                    <button class="pswp__button pswp__alt-button" title="Show caption" aria-label="Show caption">ALT</button>
+                    <button class="pswp__button pswp__alt-button" title="Show caption"
+                        aria-label="Show caption">ALT</button>
                     <div class="pswp__preloader">
                         <div class="pswp__preloader__icn">
                             <div class="pswp__preloader__cut">
@@ -93,8 +118,7 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- PhotoSwipe JS -->
     <script type="module">
@@ -110,5 +134,40 @@
     <script src="utils.js"></script>
     <script src="mapUtils.js"></script>
     <script src="album.js" defer></script>
+    <script>
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = themeToggleBtn.querySelector('.sun-icon');
+        const moonIcon = themeToggleBtn.querySelector('.moon-icon');
+
+        // Check for saved user preference, if any, on load of the website
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+
+            if (currentTheme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', function () {
+            let theme = document.documentElement.getAttribute('data-theme');
+
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        });
+    </script>
 </body>
+
 </html>
