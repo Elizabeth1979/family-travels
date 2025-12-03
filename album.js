@@ -14,6 +14,15 @@ async function initAlbum() {
       return;
     }
 
+    // Check if this is a shared link (hide back button)
+    const isShared = urlParams.get("shared") === "true";
+    if (isShared) {
+      const backLink = document.querySelector('.back-link');
+      if (backLink) {
+        backLink.style.display = 'none';
+      }
+    }
+
     // Kick off fresh fetch right away so we can do work while it loads
     const albumsPromise = fetchAlbums();
     let photosPromise = Promise.resolve();
@@ -501,5 +510,65 @@ function showError(message) {
   galleryEl.innerHTML = `<p class="error">${message}</p>`;
 }
 
+// Handle share button click
+function handleShare() {
+  if (!currentAlbum) return;
+
+  // Create shared URL
+  const url = new URL(window.location.href);
+  url.searchParams.set('shared', 'true');
+  const sharedUrl = url.toString();
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(sharedUrl).then(() => {
+    showToast('Link copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy link:', err);
+    showToast('Failed to copy link');
+  });
+}
+
+// Show toast notification
+function showToast(message) {
+  // Remove existing toast
+  const existingToast = document.querySelector('.toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  // Create new toast
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>${message}</span>
+    `;
+
+  document.body.appendChild(toast);
+
+  // Trigger animation
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
+
 // Initialize when page loads
-document.addEventListener("DOMContentLoaded", initAlbum);
+document.addEventListener("DOMContentLoaded", () => {
+  initAlbum();
+
+  // Add share button listener
+  const shareBtn = document.getElementById('share-btn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', handleShare);
+  }
+});
