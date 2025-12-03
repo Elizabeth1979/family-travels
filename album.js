@@ -176,7 +176,9 @@ async function loadPhotos(albumData = currentAlbum) {
     galleryItems = (data.items || []).filter(item => item.size > 0);
 
     if (galleryItems.length === 0) {
-      galleryEl.innerHTML = '<p class="no-photos">No photos found in this album.</p>';
+      // Preserve header if it exists
+      const headerHtml = '<div class="section-header"><h2>Photos</h2></div>';
+      galleryEl.innerHTML = headerHtml + '<p class="no-photos">No photos found in this album.</p>';
       return;
     }
 
@@ -205,7 +207,8 @@ async function loadPhotos(albumData = currentAlbum) {
     loadImageDimensions();
   } catch (error) {
     console.error("Error loading photos:", error);
-    galleryEl.innerHTML = '<p class="error">Failed to load photos. Make sure the Google Apps Script is deployed and the folder is accessible.</p>';
+    const headerHtml = '<div class="section-header"><h2>Photos</h2></div>';
+    galleryEl.innerHTML = headerHtml + '<p class="error">Failed to load photos. Make sure the Google Apps Script is deployed and the folder is accessible.</p>';
   }
 }
 
@@ -513,7 +516,9 @@ function generateAltTextFromFilename(filename, albumTitle = currentAlbum?.title 
 // Show error message
 function showError(message) {
   const galleryEl = document.getElementById("gallery");
-  galleryEl.innerHTML = `<p class="error">${message}</p>`;
+  // Preserve header if it exists or add it
+  const headerHtml = '<div class="section-header"><h2>Photos</h2></div>';
+  galleryEl.innerHTML = headerHtml + `<p class="error">${message}</p>`;
 }
 
 // Handle share button click

@@ -60,22 +60,27 @@
     </header>
 
     <main class="album-container">
-        <!-- Small location map -->
-        <a id="map-link" target="_blank" rel="noopener noreferrer" aria-label="View location on Google Maps">
-            <div id="album-map" class="album-map"></div>
-        </a>
+        <!-- Album Hero (Map + Title) -->
+        <div class="album-hero">
+            <a id="map-link" target="_blank" rel="noopener noreferrer" aria-label="View location on Google Maps">
+                <div id="album-map" class="album-map"></div>
+            </a>
 
-        <!-- Album header -->
-        <div class="album-header">
-            <h1 id="album-title">
-                <span class="loading-placeholder" aria-live="polite">Loading album...</span>
-            </h1>
-            <p id="album-date" class="album-date"></p>
-            <p id="album-description" class="album-description"></p>
+            <!-- Album header overlay -->
+            <div class="album-header">
+                <h1 id="album-title">
+                    <span class="loading-placeholder" aria-live="polite">Loading album...</span>
+                </h1>
+                <p id="album-date" class="album-date"></p>
+                <p id="album-description" class="album-description"></p>
+            </div>
         </div>
 
         <!-- Photo/Video Grid -->
         <div id="gallery" class="gallery" role="list">
+            <div class="section-header">
+                <h2>Photos</h2>
+            </div>
             <!-- Skeleton loader (replaced with actual photos when loaded) -->
             <div class="skeleton-loader">
                 <div class="skeleton-item"></div>
