@@ -146,6 +146,12 @@ function initAlbumMap() {
   L.marker([currentAlbum.lat, currentAlbum.lng], {
     title: currentAlbum.title,
   }).addTo(albumMap);
+
+  // Set Google Maps link
+  const mapLink = document.getElementById("map-link");
+  if (mapLink) {
+    mapLink.href = `https://www.google.com/maps/search/?api=1&query=${currentAlbum.lat},${currentAlbum.lng}`;
+  }
 }
 
 // Load photos from Google Drive via Apps Script

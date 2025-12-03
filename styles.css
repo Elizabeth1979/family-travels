@@ -878,6 +878,17 @@ header nav {
     padding: 3rem 2rem;
 }
 
+#map-link {
+    display: block;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#map-link:hover {
+    transform: translateY(-5px);
+}
+
 .album-map {
     height: 300px;
     width: 100%;
@@ -886,6 +897,8 @@ header nav {
     box-shadow: var(--shadow-lg);
     margin-bottom: 3rem;
     border: 3px solid var(--bg-card);
+    pointer-events: none;
+    /* Allow clicks to pass through to the link */
 }
 
 .album-header {
