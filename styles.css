@@ -171,6 +171,12 @@ header {
     overflow: hidden;
 }
 
+.album-page header {
+    position: relative;
+    background: var(--primary-gradient);
+    box-shadow: var(--shadow-md);
+}
+
 header::before {
     content: '';
     position: absolute;

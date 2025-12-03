@@ -77,7 +77,7 @@ async function initAlbum() {
     if (shouldReloadPhotos) {
       photosPromise = loadPhotos(currentAlbum);
     } else if (previousFolderId && previousFolderId !== currentAlbum.folderId) {
-      photosPromise = photosPromise.catch(() => {}).then(() => loadPhotos(currentAlbum));
+      photosPromise = photosPromise.catch(() => { }).then(() => loadPhotos(currentAlbum));
     }
 
     await photosPromise;
@@ -149,15 +149,16 @@ async function loadPhotos(albumData = currentAlbum) {
       return;
     }
 
-    // Fetch files from Google Apps Script
-    const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${albumData.folderId}`);
+    // Fetch files from Google Apps Script with cache busting
+    const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${albumData.folderId}&t=${Date.now()}`);
 
     if (!response.ok) {
       throw new Error("Failed to fetch photos from Google Drive");
     }
 
     const data = await response.json();
-    galleryItems = data.items || [];
+    // Filter out empty files (size 0) which cause broken thumbnails/videos
+    galleryItems = (data.items || []).filter(item => item.size > 0);
 
     if (galleryItems.length === 0) {
       galleryEl.innerHTML = '<p class="no-photos">No photos found in this album.</p>';
@@ -345,11 +346,28 @@ function renderGallery() {
     } else {
       // Image thumbnail
       const img = document.createElement("img");
-      img.src = item.src;
+
+      // Use Google Drive thumbnail URL which is more reliable than lh3 links
+      // and doesn't have the same referrer/expiration issues
+      if (item.id) {
+        img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w2000`;
+      } else {
+        img.src = item.src;
+      }
+
       // Use description as alt text if available, otherwise generate from filename
       img.alt = item.description || generateAltTextFromFilename(item.name, currentAlbum.title) || "Photo";
       img.className = "gallery-media";
       img.setAttribute("loading", "lazy");
+
+      // Fallback in case even the thumbnail fails
+      img.onerror = () => {
+        console.warn(`Image failed to load: ${img.src}`);
+        // Try the original src as a last resort if we weren't already using it
+        if (img.src.includes('drive.google.com/thumbnail') && item.src && item.src !== img.src) {
+          img.src = item.src;
+        }
+      };
 
       galleryItem.appendChild(img);
     }
