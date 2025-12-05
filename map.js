@@ -450,7 +450,7 @@ async function switchMapType(newType) {
         updateToggleUI(newType);
 
         // Announce to screen readers
-        const mapTypeName = newType === 'globe' ? '3D globe' :
+        const mapTypeName = newType === 'globe' ? '3D Gallery View' :
             newType === 'accessible' ? 'accessible 2D map' :
                 '3D enhanced map';
         announceToScreenReader(`Now viewing ${mapTypeName}`);
