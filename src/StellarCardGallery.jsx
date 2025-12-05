@@ -147,12 +147,13 @@ function FloatingCard({
                     onMouseEnter={() => { setHovered(true); document.body.style.cursor = "pointer"; }}
                     onMouseLeave={() => { setHovered(false); document.body.style.cursor = "auto"; }}
                     style={{
-                        width: '260px',
-                        height: '320px',
+                        width: '320px',
+                        height: '400px',
                         boxShadow: hovered
                             ? "0 12px 24px rgba(49, 184, 198, 0.4), 0 0 20px rgba(49, 184, 198, 0.2)"
                             : "0 6px 12px rgba(0, 0, 0, 0.6)",
                         border: hovered ? "2px solid rgba(49, 184, 198, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
+                        position: 'relative',
                     }}
                 >
                     <img
@@ -162,6 +163,33 @@ function FloatingCard({
                         loading="lazy"
                         draggable={false}
                     />
+                    {/* Title overlay on hover */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            padding: '12px 10px',
+                            background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0))',
+                            borderRadius: '0 0 6px 6px',
+                            opacity: hovered ? 1 : 0,
+                            transform: hovered ? 'translateY(0)' : 'translateY(8px)',
+                            transition: 'opacity 0.3s ease, transform 0.3s ease',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <p style={{
+                            color: '#fff',
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            textAlign: 'center',
+                            margin: 0,
+                            textShadow: '0 1px 3px rgba(0, 0, 0, 0.5)',
+                        }}>
+                            {card.title}
+                        </p>
+                    </div>
                 </div>
             </Html>
         </group>
