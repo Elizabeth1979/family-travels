@@ -11,26 +11,42 @@ const WORLD_BOUNDS_LEAFLET = {
 };
 
 // Common tile layer configuration for Leaflet
+// Common tile layer configuration for Leaflet
 const TILE_LAYER_CONFIG = {
-  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  options: {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-    minZoom: 2,
-    noWrap: true
+  light: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      minZoom: 2,
+      noWrap: true
+    }
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    options: {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 19,
+      minZoom: 2,
+      noWrap: true
+    }
   }
 };
 
 /**
  * Create a Leaflet tile layer with default configuration
+ * @param {string} theme - 'light' or 'dark' (default: 'light')
  * @returns {L.TileLayer} Configured tile layer
  */
-function createTileLayer() {
+function createTileLayer(theme = 'light') {
   if (typeof L === 'undefined') {
     console.error('Leaflet library not loaded');
     return null;
   }
-  return L.tileLayer(TILE_LAYER_CONFIG.url, TILE_LAYER_CONFIG.options);
+
+  // Default to light if theme not found
+  const config = TILE_LAYER_CONFIG[theme] || TILE_LAYER_CONFIG.light;
+  return L.tileLayer(config.url, config.options);
 }
 
 /**
@@ -188,7 +204,7 @@ function getMapPreference() {
     try {
       const canvas = document.createElement('canvas');
       return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-    } catch(e) {
+    } catch (e) {
       return false;
     }
   })();

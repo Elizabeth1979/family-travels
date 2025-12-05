@@ -1,6 +1,7 @@
 // Album page JavaScript
 let currentAlbum = null;
 let galleryItems = [];
+let albumMap = null;
 
 // Initialize the album page
 async function initAlbum() {
@@ -133,7 +134,7 @@ function initAlbumMap() {
     return;
   }
 
-  const albumMap = L.map("album-map", createMapOptions({
+  albumMap = L.map("album-map", createMapOptions({
     center: [currentAlbum.lat, currentAlbum.lng],
     zoom: 12,
     scrollWheelZoom: false,
@@ -141,7 +142,8 @@ function initAlbumMap() {
     zoomControl: false,
   }));
 
-  createTileLayer().addTo(albumMap);
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  createTileLayer(currentTheme).addTo(albumMap);
 
   L.marker([currentAlbum.lat, currentAlbum.lng], {
     title: currentAlbum.title,
@@ -583,3 +585,27 @@ document.addEventListener("DOMContentLoaded", () => {
     shareBtn.addEventListener('click', handleShare);
   }
 });
+// Update album map theme dynamically
+window.updateAlbumMapTheme = function (theme) {
+  console.log('Updating album map theme to:', theme);
+
+  if (!albumMap) return;
+
+  // Find existing tile layer and remove it
+  albumMap.eachLayer((layer) => {
+    if (layer instanceof L.TileLayer) {
+      albumMap.removeLayer(layer);
+    }
+  });
+
+  // Add new tile layer
+  createTileLayer(theme).addTo(albumMap);
+
+  // Re-add marker if needed (though Leaflet usually keeps overlays on top of tiles)
+  // But just to be safe and ensure stacking context is correct
+  albumMap.eachLayer((layer) => {
+    if (layer instanceof L.Marker) {
+      layer.bringToFront();
+    }
+  });
+};

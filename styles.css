@@ -42,6 +42,7 @@
     --error-color: #d32f2f;
     --error-bg-gradient: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
     --border-glass: rgba(255, 255, 255, 0.8);
+    --bg-placeholder: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -69,6 +70,7 @@
         /* Status */
         --error-color: #ef5350;
         --error-bg-gradient: linear-gradient(135deg, #5c1b1b 0%, #7f2a2a 100%);
+        --bg-placeholder: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
     }
 }
 
@@ -96,6 +98,7 @@
     /* Status */
     --error-color: #ef5350;
     --error-bg-gradient: linear-gradient(135deg, #5c1b1b 0%, #7f2a2a 100%);
+    --bg-placeholder: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
 }
 
 [data-theme="light"] {
@@ -135,6 +138,7 @@
     --error-color: #d32f2f;
     --error-bg-gradient: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
     --border-glass: rgba(255, 255, 255, 0.8);
+    --bg-placeholder: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 body {
@@ -367,7 +371,9 @@ header nav {
 }
 
 /* Custom Popup Styles */
-.maplibregl-popup-content {
+/* Increased specificity to override library defaults without !important */
+#map .maplibregl-popup-content,
+#album-map .maplibregl-popup-content {
     padding: 0;
     border-radius: 20px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
@@ -375,6 +381,14 @@ header nav {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
     min-width: 300px;
     max-width: 350px;
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+.maplibregl-popup-content h3,
+.maplibregl-popup-content p,
+.maplibregl-popup-content a {
+    color: var(--text-main);
 }
 
 .maplibregl-popup-tip {
@@ -391,7 +405,7 @@ header nav {
     width: 100%;
     height: 200px;
     overflow: hidden;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: var(--bg-placeholder);
     position: relative;
 }
 
@@ -448,6 +462,55 @@ header nav {
 .popup-content .open-album-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Leaflet Popup Styles */
+#map .leaflet-popup-content-wrapper,
+#map .leaflet-popup-tip,
+#album-map .leaflet-popup-content-wrapper,
+#album-map .leaflet-popup-tip {
+    background: var(--bg-card);
+    color: var(--text-main);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.leaflet-popup-content-wrapper {
+    padding: 0;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    width: 300px !important;
+}
+
+.leaflet-popup-content h3,
+.leaflet-popup-content p {
+    color: var(--text-main);
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+    color: var(--text-main);
+    font-size: 24px;
+    padding: 8px;
+    width: 32px;
+    height: 32px;
+    right: 8px;
+    top: 8px;
+    z-index: 10;
+    text-decoration: none;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+    color: var(--primary-color);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 /* MapLibre GL Controls Styling */
@@ -559,8 +622,23 @@ header nav {
 }
 
 /* Globe Rotation Control */
-.rotation-toggle {
-    position: relative;
+/* Globe Controls */
+.globe-controls {
+    position: absolute;
+    bottom: 110px;
+    /* Above the menu toggle */
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 1000;
+}
+
+.globe-controls.hidden {
+    display: none;
+}
+
+.globe-control-btn {
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -577,27 +655,28 @@ header nav {
     flex-shrink: 0;
 }
 
-.rotation-toggle:hover {
+.globe-control-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: scale(1.1);
     box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
 }
 
-.rotation-toggle.rotating {
+.globe-control-btn:active {
+    transform: scale(0.95);
+}
+
+.globe-control-btn svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Specific styles for rotation toggle state */
+#rotation-toggle.rotating {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.5);
 }
 
-.rotation-toggle.rotating:hover {
+#rotation-toggle.rotating:hover {
     background: rgba(255, 255, 255, 0.35);
-}
-
-.rotation-toggle svg {
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-.rotation-toggle.hidden {
-    display: none;
 }
 
 .map-type-btn {

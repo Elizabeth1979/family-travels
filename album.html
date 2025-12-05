@@ -180,11 +180,13 @@
                 localStorage.setItem('theme', 'light');
                 sunIcon.style.display = 'block';
                 moonIcon.style.display = 'none';
+                if (window.updateAlbumMapTheme) window.updateAlbumMapTheme('light');
             } else {
                 document.documentElement.setAttribute('data-theme', 'dark');
                 localStorage.setItem('theme', 'dark');
                 sunIcon.style.display = 'none';
                 moonIcon.style.display = 'block';
+                if (window.updateAlbumMapTheme) window.updateAlbumMapTheme('dark');
             }
         });
     </script>

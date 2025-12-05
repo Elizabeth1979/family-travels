@@ -37,7 +37,7 @@ async function initGlobeMap() {
     controls.rotateSpeed = 0.5;
     controls.enableZoom = true;  // Explicitly enable zoom
     controls.zoomSpeed = 3.0;  // Even faster zoom
-    controls.minDistance = 101;  // Allow very close zoom for street-level view
+    controls.minDistance = 100.1;  // Allow very close zoom for street-level view (Deep Zoom)
     controls.maxDistance = 800;
     controls.autoRotate = false;  // Disable auto-rotate by default so zoom works better
     controls.autoRotateSpeed = 0.5;
@@ -49,8 +49,8 @@ async function initGlobeMap() {
 
     console.log('Globe.GL initialized successfully');
 
-    // Show rotation toggle button
-    showRotationToggle();
+    // Show globe controls
+    showGlobeControls();
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -101,21 +101,55 @@ function updateRotationToggleUI() {
     }
 }
 
-// Show rotation toggle button
-function showRotationToggle() {
-    const toggleBtn = document.getElementById('rotation-toggle');
-    if (toggleBtn) {
-        toggleBtn.classList.remove('hidden');
+// Show globe controls
+function showGlobeControls() {
+    const controlsContainer = document.getElementById('globe-controls');
+    if (controlsContainer) {
+        controlsContainer.classList.remove('hidden');
         updateRotationToggleUI();
+
+        // Attach event listeners if not already attached (simple check)
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const rotationBtn = document.getElementById('rotation-toggle');
+
+        // Remove old listeners to prevent duplicates (cloning is a simple way)
+        const newZoomIn = zoomInBtn.cloneNode(true);
+        const newZoomOut = zoomOutBtn.cloneNode(true);
+        const newRotation = rotationBtn.cloneNode(true);
+
+        zoomInBtn.parentNode.replaceChild(newZoomIn, zoomInBtn);
+        zoomOutBtn.parentNode.replaceChild(newZoomOut, zoomOutBtn);
+        rotationBtn.parentNode.replaceChild(newRotation, rotationBtn);
+
+        newZoomIn.addEventListener('click', zoomIn);
+        newZoomOut.addEventListener('click', zoomOut);
+        newRotation.addEventListener('click', toggleGlobeRotation);
     }
 }
 
-// Hide rotation toggle button
-function hideRotationToggle() {
-    const toggleBtn = document.getElementById('rotation-toggle');
-    if (toggleBtn) {
-        toggleBtn.classList.add('hidden');
+// Hide globe controls
+function hideGlobeControls() {
+    const controlsContainer = document.getElementById('globe-controls');
+    if (controlsContainer) {
+        controlsContainer.classList.add('hidden');
     }
+}
+
+// Zoom In Function
+function zoomIn() {
+    if (!globeInstance) return;
+    const currentAltitude = globeInstance.pointOfView().altitude;
+    const newAltitude = Math.max(0.01, currentAltitude * 0.6); // Zoom in by 40%
+    globeInstance.pointOfView({ altitude: newAltitude }, 500);
+}
+
+// Zoom Out Function
+function zoomOut() {
+    if (!globeInstance) return;
+    const currentAltitude = globeInstance.pointOfView().altitude;
+    const newAltitude = Math.min(4.0, currentAltitude * 1.4); // Zoom out by 40%
+    globeInstance.pointOfView({ altitude: newAltitude }, 500);
 }
 
 // Render markers on the globe
@@ -151,6 +185,7 @@ function renderGlobeMarkers() {
             el.style.cursor = 'pointer';
             el.style.pointerEvents = 'auto';
             el.style.transition = 'transform 0.2s ease-out';
+            el.style.transformOrigin = 'bottom center'; // Scale from the bottom tip
 
             // Add hover tooltip
             el.title = `${d.album.title}${d.album.date ? ' - ' + d.album.date : ''}`;
@@ -173,10 +208,20 @@ function renderGlobeMarkers() {
 
     function updatePinSizes() {
         const distance = camera.position.length();
-        // Scale pins inversely with distance: closer = smaller pins
-        // At max distance (800): scale = 1.0
-        // At min distance (101): scale = 0.15
-        const scale = Math.max(0.15, Math.min(1.0, (distance - 101) / (800 - 101) * 0.85 + 0.15));
+        // Scale pins inversely with distance: closer = LARGER pins
+        // At max distance (800): scale = 0.5 (small)
+        // At min distance (100): scale = 1.5 (large)
+        
+        // Calculate normalized distance (0 to 1, where 0 is closest)
+        const minDst = 100;
+        const maxDst = 800;
+        const normalizedDist = Math.max(0, Math.min(1, (distance - minDst) / (maxDst - minDst)));
+        
+        // Invert: 1 is closest, 0 is furthest
+        const proximity = 1 - normalizedDist;
+        
+        // Scale from 0.5 to 1.5
+        const scale = 0.5 + (proximity * 1.0);
 
         document.querySelectorAll('.globe-pin').forEach(pin => {
             pin.style.transform = `scale(${scale})`;
@@ -220,8 +265,8 @@ function destroyGlobe() {
             globeInstance.labelsData([]);
         }
 
-        // Hide rotation toggle button
-        hideRotationToggle();
+        // Hide globe controls
+        hideGlobeControls();
 
         // Clear the container completely
         const container = document.getElementById('map');
@@ -248,7 +293,7 @@ function destroyGlobe() {
         if (container) {
             container.innerHTML = '';
         }
-        hideRotationToggle();
+        hideGlobeControls();
     }
 }
 

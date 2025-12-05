@@ -118,7 +118,8 @@ async function initLeafletMap() {
     map = L.map('map', options);
 
     // Add tile layer
-    createTileLayer().addTo(map);
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    createTileLayer(currentTheme).addTo(map);
 
     // Add zoom control
     L.control.zoom({ position: 'topright' }).addTo(map);
@@ -449,8 +450,8 @@ async function switchMapType(newType) {
 
         // Announce to screen readers
         const mapTypeName = newType === 'globe' ? '3D globe' :
-                           newType === 'accessible' ? 'accessible 2D map' :
-                           '3D enhanced map';
+            newType === 'accessible' ? 'accessible 2D map' :
+                '3D enhanced map';
         announceToScreenReader(`Now viewing ${mapTypeName}`);
 
         hideLoading();
@@ -460,6 +461,40 @@ async function switchMapType(newType) {
         alert('Failed to switch map type. Please try again.');
     }
 }
+
+// Update map theme dynamically
+window.updateMapTheme = function (theme) {
+    console.log('Updating map theme to:', theme);
+
+    if (!map) return;
+
+    if (currentMapType === 'accessible' && typeof L !== 'undefined') {
+        // Find existing tile layer and remove it
+        map.eachLayer((layer) => {
+            if (layer instanceof L.TileLayer) {
+                map.removeLayer(layer);
+            }
+        });
+
+        // Add new tile layer
+        createTileLayer(theme).addTo(map);
+
+        // Re-render markers to ensure they are on top
+        // (optional, but good practice in Leaflet)
+        if (markers.length > 0) {
+            markers.forEach(marker => marker.remove());
+            renderMarkers();
+        }
+    } else if (currentMapType === 'enhanced' && typeof maplibregl !== 'undefined') {
+        // For standard MapLibre style, we can invert colors for dark mode using CSS filter on canvas
+        const canvas = map.getCanvas();
+        if (theme === 'dark') {
+            canvas.style.filter = 'invert(100%) hue-rotate(180deg) contrast(90%)';
+        } else {
+            canvas.style.filter = 'none';
+        }
+    }
+};
 
 // Save current map state before destroying
 function saveCurrentMapState() {
