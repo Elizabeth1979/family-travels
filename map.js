@@ -112,7 +112,8 @@ async function initLeafletMap() {
     // Create map with Leaflet
     const options = createLeafletMapOptions({
         center: [mapState.center.lat, mapState.center.lng],
-        zoom: mapState.zoom
+        zoom: mapState.zoom,
+        zoomControl: false // Disable default zoom control
     });
 
     map = L.map('map', options);
@@ -121,8 +122,8 @@ async function initLeafletMap() {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
     createTileLayer(currentTheme).addTo(map);
 
-    // Add zoom control
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    // Add zoom control (topleft, will be pushed down by CSS)
+    L.control.zoom({ position: 'topleft' }).addTo(map);
 
     console.log('Leaflet map initialized successfully');
 

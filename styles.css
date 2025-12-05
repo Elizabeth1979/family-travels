@@ -513,6 +513,13 @@ header nav {
     background: rgba(0, 0, 0, 0.2);
 }
 
+/* Position Leaflet controls below the header options
+   Using ID selector to increase specificity over Leaflet's default styles
+   without resorting to !important */
+#map .leaflet-top {
+    top: 120px;
+}
+
 /* MapLibre GL Controls Styling */
 .maplibregl-ctrl-group {
     background: var(--bg-card-transparent);
