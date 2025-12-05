@@ -281,13 +281,6 @@ function createPopupContent(album) {
     title.className = 'popup-title';
     contentDiv.appendChild(title);
 
-    if (album.date) {
-        const date = document.createElement('p');
-        date.textContent = album.date;
-        date.className = 'popup-date';
-        contentDiv.appendChild(date);
-    }
-
     const button = document.createElement('a');
     button.href = `album.html?id=${album.id}`;
     button.textContent = 'Open Album';

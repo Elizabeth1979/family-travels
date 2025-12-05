@@ -243,8 +243,7 @@ function CardModal() {
                             />
                         </div>
 
-                        <h3 className="text-white text-xl font-bold mb-2 text-center">{selectedCard.title}</h3>
-                        {selectedCard.date && <p className="text-gray-400 text-sm text-center mb-4">{selectedCard.date}</p>}
+                        <h3 className="text-white text-xl font-bold mb-4 text-center">{selectedCard.title}</h3>
 
                         <div className="flex gap-2">
                             <button
