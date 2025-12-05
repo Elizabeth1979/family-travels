@@ -21,6 +21,7 @@ async function initMap() {
 
     try {
         if (currentMapType === 'globe') {
+            document.body.classList.add('globe-view');
             await initGlobeMap();
         } else if (currentMapType === 'accessible') {
             await initLeafletMap();
@@ -427,10 +428,13 @@ async function switchMapType(newType) {
     // Initialize new map
     try {
         if (newType === 'globe') {
+            document.body.classList.add('globe-view');
             await initGlobeMap();
         } else if (newType === 'accessible') {
+            document.body.classList.remove('globe-view');
             await initLeafletMap();
         } else {
+            document.body.classList.remove('globe-view');
             await initMapLibreMap();
         }
 

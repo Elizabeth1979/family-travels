@@ -252,6 +252,33 @@ header::before {
     background: rgba(0, 0, 0, 0.25);
 }
 
+/* Dark mode header styling - ensure visibility on dark backgrounds like 3D gallery */
+[data-theme="dark"] .theme-toggle {
+    background: rgba(255, 255, 255, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+/* Globe/3D Gallery view - always dark background regardless of theme */
+.globe-view .theme-toggle {
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: #ffffff;
+}
+
+.globe-view .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.globe-view header h1 {
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
 .header-text {
     flex: 1;
 }
