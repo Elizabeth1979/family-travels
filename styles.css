@@ -232,6 +232,26 @@ header::before {
     height: 20px;
 }
 
+/* Light mode header styling - ensure visibility on light map background */
+[data-theme="light"] header {
+    color: var(--text-main);
+}
+
+[data-theme="light"] header h1 {
+    color: var(--text-main);
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8), 0 0 10px rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .theme-toggle {
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    color: var(--text-main);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
 .header-text {
     flex: 1;
 }
