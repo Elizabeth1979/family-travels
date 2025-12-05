@@ -588,23 +588,12 @@ function announceToScreenReader(message) {
 
 // Initialize map type toggle
 function initMapTypeToggle() {
-    const toggleButtons = document.querySelectorAll('.map-type-btn');
-
-    toggleButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const newType = btn.getAttribute('data-map-type');
+    // Mount React MapTypeToggle component
+    if (typeof window.mountMapToggle === 'function') {
+        window.mountMapToggle('map-type-toggle', currentMapType, (newType) => {
             switchMapType(newType);
         });
-
-        // Keyboard accessibility
-        btn.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                const newType = btn.getAttribute('data-map-type');
-                switchMapType(newType);
-            }
-        });
-    });
+    }
 
     // Open album list button
     const openAlbumBtn = document.getElementById('open-album-list');
