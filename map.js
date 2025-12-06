@@ -119,9 +119,18 @@ async function initLeafletMap() {
 
     map = L.map('map', options);
 
-    // Add tile layer
+    // Get configured layers
+    const { baseMaps, overlayMaps } = getLeafletLayers();
+
+    // Add Layer Control
+    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+
+    // Determine initial layers based on theme
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    createTileLayer(currentTheme).addTo(map);
+    const initialBaseLayer = currentTheme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
+
+    // Add base layer
+    initialBaseLayer.addTo(map);
 
     // Add zoom control (topleft, will be pushed down by CSS)
     L.control.zoom({ position: 'topleft' }).addTo(map);
@@ -467,18 +476,23 @@ window.updateMapTheme = function (theme) {
     if (!map) return;
 
     if (currentMapType === 'accessible' && typeof L !== 'undefined') {
-        // Find existing tile layer and remove it
+        // Get layers
+        const { baseMaps, overlayMaps } = getLeafletLayers();
+
+        // Remove all current layers to ensure clean slate
         map.eachLayer((layer) => {
             if (layer instanceof L.TileLayer) {
                 map.removeLayer(layer);
             }
         });
 
-        // Add new tile layer
-        createTileLayer(theme).addTo(map);
+        // Determine which base layer to show
+        // We default to the standard theme map unless the user has manually selected something else?
+        // For simplicity in this update, we always switch to the theme-appropriate map
+        const newBaseLayer = theme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
+        newBaseLayer.addTo(map);
 
         // Re-render markers to ensure they are on top
-        // (optional, but good practice in Leaflet)
         if (markers.length > 0) {
             markers.forEach(marker => marker.remove());
             renderMarkers();

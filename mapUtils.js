@@ -4,49 +4,102 @@
 // LEAFLET CONFIGURATION
 // =============================================================================
 
+// =============================================================================
+// LEAFLET CONFIGURATION
+// =============================================================================
+
 // World bounds to prevent grey areas
 const WORLD_BOUNDS_LEAFLET = {
   southWest: [-90, -180],
   northEast: [90, 180]
 };
 
-// Common tile layer configuration for Leaflet
-// Common tile layer configuration for Leaflet
-const TILE_LAYER_CONFIG = {
+// Map Providers Configuration
+const MAP_PROVIDERS = {
+  // Light Mode Default (Esri NatGeo World Map)
   light: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    id: 'esri_natgeo',
+    name: 'Esri NatGeo World Map',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
     options: {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-      minZoom: 2,
-      noWrap: true
+      attribution: 'Tiles &copy; Esri &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC',
+      maxZoom: 16
     }
   },
+  // Dark Mode Default (Esri World Imagery)
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    id: 'esri_world_imagery',
+    name: 'Esri World Imagery',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     options: {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 19,
-      minZoom: 2,
-      noWrap: true
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      maxZoom: 18
+    }
+  },
+  // Overlay: Place Labels
+  labels: {
+    id: 'esri_labels',
+    name: 'Place Labels',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      attribution: '',
+      pane: 'shadowPane' // Use a different pane to ensure it stays on top of base layers but below markers
+    }
+  },
+  // Alternative Light (Esri World Street Map)
+  esri_world_street_map: {
+    id: 'esri_world_street_map',
+    name: 'Esri World Street Map',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+    }
+  },
+  // Additional Light (Esri World Topo Map)
+  esri_world_topo_map: {
+    id: 'esri_world_topo_map',
+    name: 'Esri World Topo Map',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
     }
   }
 };
 
 /**
- * Create a Leaflet tile layer with default configuration
- * @param {string} theme - 'light' or 'dark' (default: 'light')
+ * Get all configured tile layers
+ * @returns {Object} Object containing baseMaps and overlayMaps for L.control.layers
+ */
+function getLeafletLayers() {
+  if (typeof L === 'undefined') return null;
+
+  const baseMaps = {
+    [MAP_PROVIDERS.light.name]: L.tileLayer(MAP_PROVIDERS.light.url, MAP_PROVIDERS.light.options),
+    [MAP_PROVIDERS.dark.name]: L.tileLayer(MAP_PROVIDERS.dark.url, MAP_PROVIDERS.dark.options),
+    [MAP_PROVIDERS.esri_world_street_map.name]: L.tileLayer(MAP_PROVIDERS.esri_world_street_map.url, MAP_PROVIDERS.esri_world_street_map.options),
+    [MAP_PROVIDERS.esri_world_topo_map.name]: L.tileLayer(MAP_PROVIDERS.esri_world_topo_map.url, MAP_PROVIDERS.esri_world_topo_map.options)
+  };
+
+  const overlayMaps = {
+    [MAP_PROVIDERS.labels.name]: L.tileLayer(MAP_PROVIDERS.labels.url, MAP_PROVIDERS.labels.options)
+  };
+
+  return { baseMaps, overlayMaps };
+}
+
+/**
+ * Create a specific Leaflet tile layer
+ * @param {string} providerKey - Key from MAP_PROVIDERS (e.g., 'light', 'dark')
  * @returns {L.TileLayer} Configured tile layer
  */
-function createTileLayer(theme = 'light') {
+function createTileLayer(providerKey = 'light') {
   if (typeof L === 'undefined') {
     console.error('Leaflet library not loaded');
     return null;
   }
 
-  // Default to light if theme not found
-  const config = TILE_LAYER_CONFIG[theme] || TILE_LAYER_CONFIG.light;
-  return L.tileLayer(config.url, config.options);
+  const provider = MAP_PROVIDERS[providerKey] || MAP_PROVIDERS.light;
+  return L.tileLayer(provider.url, provider.options);
 }
 
 /**

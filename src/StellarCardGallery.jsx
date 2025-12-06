@@ -340,7 +340,13 @@ function CardGalaxy() {
 
     return (
         <>
-
+            {cards.length === 0 && (
+                <Html position={[0, 0, 0]} center>
+                    <div className="text-white text-xl font-bold animate-pulse">
+                        Loading Galaxy...
+                    </div>
+                </Html>
+            )}
 
             {cards.map((card, i) => (
                 <FloatingCard key={card.id} card={card} position={cardPositions[i] || { x: 0, y: 0, z: 0 }} />

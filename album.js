@@ -143,7 +143,14 @@ function initAlbumMap() {
   }));
 
   const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+  // Add base layer
   createTileLayer(currentTheme).addTo(albumMap);
+
+  // Add labels if dark mode (Satellite)
+  if (currentTheme === 'dark') {
+    createTileLayer('labels').addTo(albumMap);
+  }
 
   L.marker([currentAlbum.lat, currentAlbum.lng], {
     title: currentAlbum.title,
@@ -600,6 +607,11 @@ window.updateAlbumMapTheme = function (theme) {
 
   // Add new tile layer
   createTileLayer(theme).addTo(albumMap);
+
+  // Add labels if dark mode (Satellite)
+  if (theme === 'dark') {
+    createTileLayer('labels').addTo(albumMap);
+  }
 
   // Re-add marker if needed (though Leaflet usually keeps overlays on top of tiles)
   // But just to be safe and ensure stacking context is correct
