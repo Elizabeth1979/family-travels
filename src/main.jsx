@@ -4,6 +4,17 @@ import StellarCardGallery from './StellarCardGallery'
 import MapTypeToggle from './components/MapTypeToggle'
 import './index.css'
 
+// =============================================================================
+// CRITICAL: DO NOT MODIFY WITHOUT CAREFUL REVIEW
+// This handles React mounting for the 3D gallery. The root caching is critical.
+// =============================================================================
+
+// Cache for React roots to avoid createRoot() errors on re-mount
+// CRITICAL: These must be properly managed to prevent React errors
+let galleryRoot = null;
+let galleryContainer = null;
+let toggleRoot = null;
+
 // This function will be called from map.js/globe.js
 window.mountGallery = function (containerId, albums) {
     const container = document.getElementById(containerId);
@@ -23,15 +34,46 @@ window.mountGallery = function (containerId, albums) {
         ...album
     }));
 
-    const root = ReactDOM.createRoot(container);
-    root.render(
+    // Check if we need a new root:
+    // - If no root exists
+    // - If the container element changed (e.g., was replaced in the DOM)
+    // DO NOT REMOVE - This prevents createRoot() errors on re-mount
+    const needsNewRoot = !galleryRoot || galleryContainer !== container;
+
+    if (needsNewRoot) {
+        // If there was an old root, unmount it first
+        if (galleryRoot) {
+            try {
+                galleryRoot.unmount();
+            } catch (e) {
+                console.warn('Failed to unmount old gallery root:', e);
+            }
+        }
+        // Clear any existing content before creating new root
+        container.innerHTML = '';
+        galleryRoot = ReactDOM.createRoot(container);
+        galleryContainer = container;
+    }
+
+    galleryRoot.render(
         <React.StrictMode>
             <StellarCardGallery cards={cards} />
         </React.StrictMode>
     );
 
     // Return unmount function for cleanup
-    return () => root.unmount();
+    // CRITICAL: This resets both root AND container reference
+    return () => {
+        if (galleryRoot) {
+            try {
+                galleryRoot.unmount();
+            } catch (e) {
+                console.warn('Failed to unmount gallery root:', e);
+            }
+            galleryRoot = null;
+            galleryContainer = null;
+        }
+    };
 };
 
 // Mount MapTypeToggle component for view switching

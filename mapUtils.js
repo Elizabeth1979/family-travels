@@ -179,6 +179,9 @@ function createMarkerElement(color = '#FF6B6B') {
       <circle cx="16" cy="16" r="6" fill="white"/>
     </svg>
   `;
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', 'Map marker');
   return el;
 }
 

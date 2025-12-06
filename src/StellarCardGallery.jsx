@@ -104,6 +104,7 @@ function FloatingCard({
     const meshRef = useRef(null)
     const groupRef = useRef(null)
     const [hovered, setHovered] = useState(false)
+    const hoverTimeoutRef = useRef(null)
     const { setSelectedCard } = useCard()
 
     useFrame(({ camera }) => {
@@ -119,15 +120,33 @@ function FloatingCard({
             window.location.href = `album.html?id=${card.id}`
         }
     }
-    const handlePointerOver = (e) => {
-        e.stopPropagation()
+
+    // Debounced hover handlers to make hover more persistent
+    const handleMouseEnter = () => {
+        // Clear any pending leave timeout
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current)
+            hoverTimeoutRef.current = null
+        }
         setHovered(true)
         document.body.style.cursor = "pointer"
     }
+
+    const handleMouseLeave = () => {
+        // Delay the hover removal to give user time to reach interactive elements
+        hoverTimeoutRef.current = setTimeout(() => {
+            setHovered(false)
+            document.body.style.cursor = "auto"
+        }, 150)
+    }
+
+    const handlePointerOver = (e) => {
+        e.stopPropagation()
+        handleMouseEnter()
+    }
     const handlePointerOut = (e) => {
         e.stopPropagation()
-        setHovered(false)
-        document.body.style.cursor = "auto"
+        handleMouseLeave()
     }
 
     return (
@@ -136,59 +155,65 @@ function FloatingCard({
                 transform
                 distanceFactor={10}
                 position={[0, 0, 0.01]}
-                style={{
-                    transition: "all 0.3s ease",
-                    transform: hovered ? "scale(1.08)" : "scale(1)",
-                }}
             >
+                {/* Outer wrapper for stable hover detection - no transform here */}
                 <div
-                    className="rounded-lg overflow-hidden shadow-lg bg-[#1F2121] p-1 select-none cursor-pointer"
-                    onClick={handleClick}
-                    onMouseEnter={() => { setHovered(true); document.body.style.cursor = "pointer"; }}
-                    onMouseLeave={() => { setHovered(false); document.body.style.cursor = "auto"; }}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                     style={{
-                        width: '320px',
-                        height: '400px',
-                        boxShadow: hovered
-                            ? "0 12px 24px rgba(49, 184, 198, 0.4), 0 0 20px rgba(49, 184, 198, 0.2)"
-                            : "0 6px 12px rgba(0, 0, 0, 0.6)",
-                        border: hovered ? "2px solid rgba(49, 184, 198, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
-                        position: 'relative',
+                        padding: '20px', // Buffer zone for easier hover
+                        margin: '-20px', // Offset the padding
+                        cursor: 'pointer',
                     }}
                 >
-                    <img
-                        src={card.cover || "/placeholder.svg"}
-                        alt={card.alt}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
-                        loading="lazy"
-                        draggable={false}
-                    />
-                    {/* Title overlay on hover */}
+                    {/* Visual card - no scale transform to avoid pointer event issues */}
                     <div
+                        className="rounded-lg overflow-hidden shadow-lg bg-[#1F2121] p-1 select-none cursor-pointer"
+                        onClick={handleClick}
                         style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            padding: '12px 10px',
-                            background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0))',
-                            borderRadius: '0 0 6px 6px',
-                            opacity: hovered ? 1 : 0,
-                            transform: hovered ? 'translateY(0)' : 'translateY(8px)',
-                            transition: 'opacity 0.3s ease, transform 0.3s ease',
-                            pointerEvents: 'none',
+                            width: '320px',
+                            height: '400px',
+                            transition: 'box-shadow 0.3s ease, border 0.3s ease',
+                            boxShadow: hovered
+                                ? "0 12px 24px rgba(49, 184, 198, 0.5), 0 0 30px rgba(49, 184, 198, 0.3)"
+                                : "0 6px 12px rgba(0, 0, 0, 0.6)",
+                            border: hovered ? "2px solid rgba(49, 184, 198, 0.8)" : "1px solid rgba(255, 255, 255, 0.1)",
+                            position: 'relative',
                         }}
                     >
-                        <p style={{
-                            color: '#fff',
-                            fontSize: '18px',
-                            fontWeight: '600',
-                            textAlign: 'center',
-                            margin: 0,
-                            textShadow: '0 1px 3px rgba(0, 0, 0, 0.5)',
-                        }}>
-                            {card.title}
-                        </p>
+                        <img
+                            src={card.cover || "/placeholder.svg"}
+                            alt={card.alt}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
+                            loading="lazy"
+                            draggable={false}
+                        />
+                        {/* Title overlay - always visible */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                padding: '16px 10px',
+                                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.6) 60%, transparent)',
+                                borderRadius: '0 0 6px 6px',
+                                opacity: 1, // Always visible
+                                transition: 'all 0.3s ease',
+                                pointerEvents: 'none',
+                            }}
+                        >
+                            <p style={{
+                                color: '#fff',
+                                fontSize: '18px',
+                                fontWeight: '600',
+                                textAlign: 'center',
+                                margin: 0,
+                                textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+                            }}>
+                                {card.title}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </Html>

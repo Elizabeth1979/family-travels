@@ -201,15 +201,18 @@ function renderMapLibreMarkers() {
 
         // Create custom marker element
         const el = createMarkerElement('#FF6B6B');
+        el.setAttribute('aria-label', `View ${album.title} album`);
 
         // Create popup content
         const popupContent = createPopupContent(album);
 
-        // Create popup
+        // Create popup with closeOnClick disabled so user can interact with it
         const popup = new maplibregl.Popup({
             offset: 25,
             maxWidth: '300px',
-            className: 'custom-popup'
+            className: 'custom-popup',
+            closeOnClick: false,
+            closeButton: true
         }).setDOMContent(popupContent);
 
         // Create marker
@@ -220,6 +223,73 @@ function renderMapLibreMarkers() {
             .setLngLat([album.lng, album.lat])
             .setPopup(popup)
             .addTo(map);
+
+        // Track if mouse is over popup
+        let isOverPopup = false;
+        let closeTimeout = null;
+
+        const scheduleClose = () => {
+            closeTimeout = setTimeout(() => {
+                if (!isOverPopup && popup.isOpen()) {
+                    popup.remove();
+                }
+            }, 300);
+        };
+
+        const cancelClose = () => {
+            if (closeTimeout) {
+                clearTimeout(closeTimeout);
+                closeTimeout = null;
+            }
+        };
+
+        // Open on marker hover
+        el.addEventListener('mouseenter', () => {
+            cancelClose();
+            if (!popup.isOpen()) {
+                marker.togglePopup();
+            }
+        });
+
+        el.addEventListener('mouseleave', () => {
+            scheduleClose();
+        });
+
+        // Track popup hover to keep it open
+        popup.on('open', () => {
+            const popupEl = popup.getElement();
+            if (popupEl) {
+                popupEl.addEventListener('mouseenter', () => {
+                    isOverPopup = true;
+                    cancelClose();
+                });
+                popupEl.addEventListener('mouseleave', () => {
+                    isOverPopup = false;
+                    scheduleClose();
+                });
+            }
+        });
+
+        // Add keyboard interaction with focus management
+        el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                marker.togglePopup();
+
+                // If popup is now open, focus the button inside it
+                if (popup.isOpen()) {
+                    setTimeout(() => {
+                        const popupEl = popup.getElement();
+                        if (popupEl) {
+                            const btn = popupEl.querySelector('.open-album-btn');
+                            if (btn) {
+                                btn.focus();
+                            }
+                        }
+                    }, 100);
+                }
+            }
+        });
 
         markers.push(marker);
         bounds.extend([album.lng, album.lat]);
@@ -248,10 +318,97 @@ function renderLeafletMarkers() {
         // Create popup content
         const popupContent = createPopupContent(album);
 
-        // Create marker
+        // Create marker with popup that doesn't auto-close
         const marker = L.marker([album.lat, album.lng])
-            .bindPopup(popupContent)
+            .bindPopup(popupContent, {
+                autoClose: false,
+                closeOnClick: false
+            })
             .addTo(map);
+
+        // Track if mouse is over marker or popup
+        let isOverMarkerOrPopup = false;
+        let closeTimeout = null;
+
+        const scheduleClose = () => {
+            closeTimeout = setTimeout(() => {
+                if (!isOverMarkerOrPopup) {
+                    marker.closePopup();
+                }
+            }, 300);
+        };
+
+        const cancelClose = () => {
+            if (closeTimeout) {
+                clearTimeout(closeTimeout);
+                closeTimeout = null;
+            }
+        };
+
+        // Open on marker hover
+        marker.on('mouseover', function (e) {
+            isOverMarkerOrPopup = true;
+            cancelClose();
+            this.openPopup();
+        });
+
+        marker.on('mouseout', function (e) {
+            isOverMarkerOrPopup = false;
+            scheduleClose();
+        });
+
+        // Track popup hover to keep it open
+        marker.on('popupopen', function (e) {
+            const popupEl = e.popup.getElement();
+            if (popupEl) {
+                popupEl.addEventListener('mouseenter', () => {
+                    isOverMarkerOrPopup = true;
+                    cancelClose();
+                });
+                popupEl.addEventListener('mouseleave', () => {
+                    isOverMarkerOrPopup = false;
+                    scheduleClose();
+                });
+
+                // Focus the button inside popup for keyboard users
+                setTimeout(() => {
+                    const btn = popupEl.querySelector('.open-album-btn');
+                    if (btn && document.activeElement !== btn) {
+                        // Only auto-focus if opened via keyboard (check if marker element was focused)
+                        const markerEl = marker.getElement();
+                        if (markerEl && document.activeElement === markerEl) {
+                            btn.focus();
+                        }
+                    }
+                }, 100);
+            }
+        });
+
+        // Add keyboard support for markers
+        const markerEl = marker.getElement();
+        if (markerEl) {
+            markerEl.setAttribute('tabindex', '0');
+            markerEl.setAttribute('role', 'button');
+            markerEl.setAttribute('aria-label', `View ${album.title} album`);
+
+            markerEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    marker.openPopup();
+
+                    // Focus the button after popup opens
+                    setTimeout(() => {
+                        const popupEl = marker.getPopup().getElement();
+                        if (popupEl) {
+                            const btn = popupEl.querySelector('.open-album-btn');
+                            if (btn) {
+                                btn.focus();
+                            }
+                        }
+                    }, 100);
+                }
+            });
+        }
 
         markers.push(marker);
         bounds.extend([album.lat, album.lng]);
@@ -604,14 +761,42 @@ function announceToScreenReader(message) {
     }, 1000);
 }
 
+// =============================================================================
+// CRITICAL: DO NOT MODIFY THIS FUNCTION WITHOUT CAREFUL REVIEW
+// This handles the map type toggle initialization. The async timing with
+// React is critical for the toggle buttons to appear.
+// =============================================================================
 // Initialize map type toggle
 function initMapTypeToggle() {
+    // Helper to wait for global functions (React module loads async)
+    // DO NOT REMOVE - This is critical for the toggle to load correctly
+    const waitForGlobal = async (name, timeout = 5000) => {
+        const start = Date.now();
+        return new Promise((resolve, reject) => {
+            if (window[name]) {
+                resolve(window[name]);
+                return;
+            }
+            const interval = setInterval(() => {
+                if (window[name]) {
+                    clearInterval(interval);
+                    resolve(window[name]);
+                } else if (Date.now() - start > timeout) {
+                    clearInterval(interval);
+                    reject(new Error(`Timed out waiting for ${name}`));
+                }
+            }, 50);
+        });
+    };
+
     // Mount React MapTypeToggle component
-    if (typeof window.mountMapToggle === 'function') {
+    waitForGlobal('mountMapToggle').then(() => {
         window.mountMapToggle('map-type-toggle', currentMapType, (newType) => {
             switchMapType(newType);
         });
-    }
+    }).catch(error => {
+        console.error('Failed to load map toggle:', error);
+    });
 
     // Open album list button
     const openAlbumBtn = document.getElementById('open-album-list');

@@ -1,30 +1,57 @@
+// =============================================================================
+// CRITICAL: DO NOT MODIFY THIS FILE WITHOUT CAREFUL REVIEW
+// This file handles the 3D Gallery initialization. Changes here can break
+// the gallery loading. The async timing with React is critical.
+// =============================================================================
+
 // React-based 3D Card Gallery Implementation
 // Replaces the previous Globe.GL implementation
 
 let galleryUnmount = null;
 
 // Initialize the 3D Gallery (formerly globe map)
+// IMPORTANT: This function must be async to properly work with initMap() in map.js
 async function initGlobeMap() {
     console.log('Initializing 3D Card Gallery');
+
+    // Helper to wait for global functions (React module loads async)
+    // DO NOT REMOVE - This is critical for the gallery to load correctly
+    const waitForGlobal = async (name, timeout = 5000) => {
+        const start = Date.now();
+        return new Promise((resolve, reject) => {
+            if (window[name]) {
+                resolve(window[name]);
+                return;
+            }
+            const interval = setInterval(() => {
+                if (window[name]) {
+                    clearInterval(interval);
+                    resolve(window[name]);
+                } else if (Date.now() - start > timeout) {
+                    clearInterval(interval);
+                    reject(new Error(`Timed out waiting for ${name}`));
+                }
+            }, 50);
+        });
+    };
 
     // Get the map container
     const container = document.getElementById('map');
 
-    // Clear any existing content
-    container.innerHTML = '';
+    // Note: container cleanup is now handled by mountGallery in main.jsx
+    // DO NOT clear innerHTML here - it interferes with React root management
 
-    // Check if mountGallery is available (loaded from src/main.jsx)
-    if (typeof window.mountGallery === 'function') {
-        // We need albums data. It should be available globally in 'albums' variable from map.js
-        // If empty, we might need to wait, but usually initMap is called after basic setup
+    // Wait for mountGallery to be available (from React module)
+    try {
+        await waitForGlobal('mountGallery');
 
         // Pass the global albums array
         // Note: albums is a global variable from map.js (declared with let), so it's not on window
         galleryUnmount = window.mountGallery('map', albums || []);
 
         console.log('3D Card Gallery mounted');
-    } else {
-        console.error('mountGallery function not found. React app might not be loaded.');
+    } catch (error) {
+        console.error('mountGallery function not found:', error);
         container.innerHTML = '<div class="error-message">Failed to load 3D Gallery. Please refresh.</div>';
     }
 
@@ -55,10 +82,8 @@ function destroyGlobe() {
         galleryUnmount = null;
     }
 
-    const container = document.getElementById('map');
-    if (container) {
-        container.innerHTML = '';
-    }
+    // Note: We no longer clear innerHTML here since mountGallery handles cleanup
+    // The React unmount above will clean up the React component
 }
 
 // Toggle globe rotation (No-op or custom implementation for React)
