@@ -1168,6 +1168,28 @@ header nav {
     border: 3px solid var(--bg-card);
 }
 
+/* Staggered reveal animation - items start hidden and animate in */
+.gallery-item-hidden {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+}
+
+.gallery-item-visible {
+    animation: galleryReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes galleryReveal {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 .gallery-item::before {
     content: '';
     position: absolute;
@@ -1197,7 +1219,47 @@ header nav {
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out;
+}
+
+/* Progressive loading state - shows shimmer placeholder until image loads */
+.gallery-media.loading {
+    opacity: 0;
+}
+
+.gallery-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+            var(--bg-card) 0%,
+            var(--border-color) 50%,
+            var(--bg-card) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.4s ease-out;
+}
+
+/* Hide shimmer when image is loaded */
+.gallery-item:has(.gallery-media:not(.loading))::after {
+    opacity: 0;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .gallery-item:hover .gallery-media {

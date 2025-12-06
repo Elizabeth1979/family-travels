@@ -26,7 +26,6 @@ async function initAlbum() {
 
     // Kick off fresh fetch right away so we can do work while it loads
     const albumsPromise = fetchAlbums();
-    let photosPromise = Promise.resolve();
     let usedCachedAlbum = false;
 
     // Try to get album data from sessionStorage (instant!)
@@ -38,10 +37,8 @@ async function initAlbum() {
           currentAlbum = cachedAlbum;
           usedCachedAlbum = true;
           displayAlbumInfo();
+          // Initialize map immediately from cache - don't wait for photos!
           initAlbumMap();
-          if (cachedAlbum.folderId) {
-            photosPromise = loadPhotos(currentAlbum);
-          }
         }
       } catch (e) {
         console.warn('Failed to parse cached album:', e);
@@ -62,9 +59,6 @@ async function initAlbum() {
       return;
     }
 
-    const previousFolderId = currentAlbum ? currentAlbum.folderId : null;
-    const hadFolderId = Boolean(previousFolderId);
-
     currentAlbum = freshAlbum;
 
     try {
@@ -75,22 +69,22 @@ async function initAlbum() {
 
     // Update display with fresh data
     displayAlbumInfo();
-    if (!document.getElementById('album-map').hasChildNodes()) {
+
+    // Initialize map with fresh data if not already done or if coordinates changed
+    const mapContainer = document.getElementById('album-map');
+    const mapNeedsInit = !mapContainer.hasChildNodes() || !albumMap;
+    if (mapNeedsInit && currentAlbum.lat && currentAlbum.lng) {
       initAlbumMap();
     }
 
-    const shouldReloadPhotos =
-      !usedCachedAlbum ||
-      !hadFolderId ||
-      previousFolderId !== currentAlbum.folderId;
-
-    if (shouldReloadPhotos) {
-      photosPromise = loadPhotos(currentAlbum);
-    } else if (previousFolderId && previousFolderId !== currentAlbum.folderId) {
-      photosPromise = photosPromise.catch(() => { }).then(() => loadPhotos(currentAlbum));
+    // Load photos asynchronously - DO NOT await, let the map show immediately
+    // Always load photos on page load - we need to fetch from the API
+    if (currentAlbum.folderId) {
+      // Start photo loading but don't block on it
+      loadPhotos(currentAlbum).catch(error => {
+        console.error("Error loading photos:", error);
+      });
     }
-
-    await photosPromise;
   } catch (error) {
     console.error("Error loading album:", error);
     showError("Failed to load album");
@@ -130,8 +124,18 @@ function displayAlbumInfo() {
 function initAlbumMap() {
   // Check if currentAlbum has coordinates
   if (!currentAlbum || !currentAlbum.lat || !currentAlbum.lng) {
-    console.warn("Cannot initialize map: missing coordinates");
+    console.warn("Cannot initialize map: missing coordinates", {
+      hasAlbum: !!currentAlbum,
+      lat: currentAlbum?.lat,
+      lng: currentAlbum?.lng
+    });
     return;
+  }
+
+  // Clean up existing map if present
+  if (albumMap) {
+    albumMap.remove();
+    albumMap = null;
   }
 
   albumMap = L.map("album-map", createMapOptions({
@@ -283,12 +287,13 @@ async function loadImageDimensions() {
   }
 }
 
-// Render gallery grid
+// Render gallery grid with staggered animation
 function renderGallery() {
   const galleryEl = document.getElementById("gallery");
   galleryEl.innerHTML = "";
 
   let lastType = null; // Track if we've switched from images to videos
+  let itemCount = 0; // Track item index for staggered animation
 
   galleryItems.forEach((item, index) => {
     const isVideo = item.mime && item.mime.startsWith("video/");
@@ -299,6 +304,7 @@ function renderGallery() {
       videoSectionHeader.className = "section-header";
       videoSectionHeader.innerHTML = '<h2>Videos</h2>';
       galleryEl.appendChild(videoSectionHeader);
+      itemCount = 0; // Reset count for video section
     } else if (lastType === null && isVideo === false) {
       // Add Photos header at the beginning if we have images
       const photoSectionHeader = document.createElement("div");
@@ -317,15 +323,18 @@ function renderGallery() {
 
     const galleryItem = document.createElement("a");
     galleryItem.href = item.src;
-    galleryItem.className = "gallery-item";
+    // Start hidden for staggered reveal animation
+    galleryItem.className = "gallery-item gallery-item-hidden";
     galleryItem.setAttribute("data-index", index);
     galleryItem.setAttribute("role", "listitem");
-    // Let PhotoSwipe calculate dimensions from the actual image
+    // Set animation delay based on position for cascade effect
+    galleryItem.style.animationDelay = `${itemCount * 50}ms`;
+    itemCount++;
 
     if (isVideo) {
       // For videos, try to get thumbnail from Google Drive
       const videoThumbnail = document.createElement("img");
-      videoThumbnail.className = "gallery-media";
+      videoThumbnail.className = "gallery-media loading";
       videoThumbnail.setAttribute("loading", "lazy");
 
       // Extract file ID from Google Drive URL
@@ -341,6 +350,11 @@ function renderGallery() {
         videoThumbnail.src = thumbnailUrl;
         // Use description as alt text if available, otherwise generate from filename
         videoThumbnail.alt = item.description || generateAltTextFromFilename(item.name, currentAlbum.title) || "Video thumbnail";
+
+        // Progressive loading: fade in when loaded
+        videoThumbnail.onload = () => {
+          videoThumbnail.classList.remove('loading');
+        };
 
         // Fallback to gradient placeholder if thumbnail fails to load
         videoThumbnail.onerror = () => {
@@ -384,12 +398,18 @@ function renderGallery() {
 
       // Use description as alt text if available, otherwise generate from filename
       img.alt = item.description || generateAltTextFromFilename(item.name, currentAlbum.title) || "Photo";
-      img.className = "gallery-media";
+      img.className = "gallery-media loading";
       img.setAttribute("loading", "lazy");
+
+      // Progressive loading: fade in when loaded
+      img.onload = () => {
+        img.classList.remove('loading');
+      };
 
       // Fallback in case even the thumbnail fails
       img.onerror = () => {
         console.warn(`Image failed to load: ${img.src}`);
+        img.classList.remove('loading');
         // Try the original src as a last resort if we weren't already using it
         if (img.src.includes('drive.google.com/thumbnail') && item.src && item.src !== img.src) {
           img.src = item.src;
@@ -400,6 +420,15 @@ function renderGallery() {
     }
 
     galleryEl.appendChild(galleryItem);
+  });
+
+  // Trigger staggered reveal animation after items are in the DOM
+  requestAnimationFrame(() => {
+    const hiddenItems = galleryEl.querySelectorAll('.gallery-item-hidden');
+    hiddenItems.forEach(item => {
+      item.classList.remove('gallery-item-hidden');
+      item.classList.add('gallery-item-visible');
+    });
   });
 }
 
