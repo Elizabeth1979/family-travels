@@ -486,7 +486,80 @@ function initPhotoSwipe() {
     });
   });
 
+  // Pause previous video when changing slides
+  lightbox.on('change', () => {
+    const contentElements = document.querySelectorAll('.pswp__content');
+    const currentSlideIndex = lightbox.pswp.currIndex;
+
+    contentElements.forEach((content, i) => {
+      if (i !== currentSlideIndex) {
+        const iframe = content.querySelector('iframe');
+        if (iframe) {
+          // Pause non-current videos by resetting src
+          const currentSrc = iframe.src;
+          iframe.src = '';
+          iframe.src = currentSrc;
+        }
+      }
+    });
+  });
+
+  // Pause all videos when lightbox closes
+  lightbox.on('close', () => {
+    const iframes = document.querySelectorAll('.pswp__content iframe');
+    iframes.forEach(iframe => {
+      iframe.src = '';
+    });
+  });
+
   lightbox.init();
+
+  // Set up Intersection Observer to pause videos when scrolling out of view
+  setupVideoObserver();
+}
+
+// Set up Intersection Observer to pause videos when they scroll out of view
+function setupVideoObserver() {
+  // Observe the PhotoSwipe container for video iframes
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) {
+        // Video is out of view, pause it by resetting the iframe src
+        const iframe = entry.target;
+        const currentSrc = iframe.src;
+        if (currentSrc) {
+          iframe.src = '';
+          iframe.src = currentSrc;
+        }
+      }
+    });
+  }, {
+    threshold: 0.1 // Trigger when less than 10% is visible
+  });
+
+  // Also observe any video elements in the gallery (though we mainly use iframes)
+  const mutationObserver = new MutationObserver((mutations) => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // Look for iframes in the PhotoSwipe container
+          const iframes = node.querySelectorAll ? node.querySelectorAll('iframe') : [];
+          iframes.forEach(iframe => observer.observe(iframe));
+
+          // If the node itself is an iframe
+          if (node.tagName === 'IFRAME') {
+            observer.observe(node);
+          }
+        }
+      });
+    });
+  });
+
+  // Watch for PhotoSwipe content being added to the DOM
+  mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 }
 
 // Generate readable alt text from filename

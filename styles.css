@@ -1296,6 +1296,23 @@ header nav {
 }
 
 /* PhotoSwipe customization */
+.pswp__button--close {
+    /* Make close button larger to cover Google Drive's popout button */
+    width: 52px !important;
+    height: 52px !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    border-radius: 50%;
+    margin: 8px;
+    position: relative;
+    z-index: 100;
+    transition: all 0.2s ease;
+}
+
+.pswp__button--close:hover {
+    background: rgba(0, 0, 0, 1) !important;
+    transform: scale(1.1);
+}
+
 .pswp__alt-button {
     background: rgba(0, 0, 0, 0.5);
     color: var(--text-inverse);
