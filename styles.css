@@ -177,8 +177,9 @@ header {
 
 .album-page header {
     position: relative;
-    background: var(--primary-gradient);
-    box-shadow: var(--shadow-md);
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 header::before {
@@ -345,21 +346,27 @@ header nav {
 }
 
 .back-link {
-    color: var(--text-inverse);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--text-light);
     text-decoration: none;
-    font-size: 1.1rem;
-    font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: rgba(255, 255, 255, 0.15);
+    font-size: 1.25rem;
+    transition: all 0.3s ease;
+    background: var(--bg-card-transparent);
     backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
 }
 
 .back-link:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    background: #31b8c6;
+    color: var(--text-inverse);
+    border-color: #31b8c6;
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(49, 184, 198, 0.3);
 }
 
 /* Map Container */
@@ -1138,27 +1145,14 @@ header nav {
 }
 
 .section-header h2 {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-main);
     margin-bottom: 0.5rem;
     letter-spacing: -0.5px;
     position: relative;
     padding-bottom: 1rem;
-}
-
-.section-header h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 80px;
-    height: 4px;
-    background: var(--primary-gradient);
-    border-radius: 2px;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .gallery-item {
@@ -1231,17 +1225,24 @@ header nav {
 
 .video-label {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 12px;
+    left: 12px;
     background: var(--bg-card-transparent);
-    color: var(--primary-color);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--text-light);
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 10px;
+    font-weight: 600;
     letter-spacing: 1px;
     z-index: 2;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-color);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-item:hover .video-label {
+    opacity: 1;
 }
 
 /* Play icon for videos */
@@ -1250,25 +1251,30 @@ header nav {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80px;
-    height: 80px;
+    width: 48px;
+    height: 48px;
     background: var(--bg-card-transparent);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--primary-color);
-    font-size: 32px;
-    padding-left: 6px;
+    color: var(--text-light);
+    font-size: 18px;
+    padding-left: 3px;
     pointer-events: none;
     z-index: 2;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+    opacity: 0;
     transition: all 0.3s ease;
 }
 
 .gallery-item:hover .play-icon {
-    transform: translate(-50%, -50%) scale(1.2);
-    background: var(--bg-card);
+    opacity: 1;
+    background: #31b8c6;
+    color: var(--text-inverse);
+    border-color: #31b8c6;
+    box-shadow: 0 4px 16px rgba(49, 184, 198, 0.4);
 }
 
 .no-photos {
@@ -1505,25 +1511,28 @@ header nav {
     background: var(--secondary-gradient);
 }
 
-/* Share Button (matches theme toggle) */
+/* Share Button (matches other icon buttons) */
 .share-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: var(--bg-card-transparent);
+    border: 1px solid var(--border-color);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: white;
+    color: var(--text-light);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
 }
 
 .share-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
+    background: #31b8c6;
+    color: var(--text-inverse);
+    border-color: #31b8c6;
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(49, 184, 198, 0.3);
 }
 
 .share-btn svg {
