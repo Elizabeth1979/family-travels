@@ -272,28 +272,28 @@ function FloatingCard({
                             loading="lazy"
                             draggable={false}
                         />
-                        {/* Title overlay - always visible */}
+                        {/* Title overlay - visible on hover */}
                         <div
                             style={{
                                 position: 'absolute',
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                padding: '16px 10px',
-                                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.6) 60%, transparent)',
+                                padding: '20px 12px',
+                                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.7) 60%, transparent)',
                                 borderRadius: '0 0 6px 6px',
-                                opacity: 1, // Always visible
-                                transition: 'all 0.3s ease',
+                                opacity: hovered ? 1 : 0,
+                                transition: 'opacity 0.3s ease',
                                 pointerEvents: 'none',
                             }}
                         >
                             <p style={{
                                 color: '#fff',
-                                fontSize: '18px',
-                                fontWeight: '600',
+                                fontSize: '24px',
+                                fontWeight: '700',
                                 textAlign: 'center',
                                 margin: 0,
-                                textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+                                textShadow: '0 2px 6px rgba(0, 0, 0, 0.9)',
                             }}>
                                 {card.title}
                             </p>
