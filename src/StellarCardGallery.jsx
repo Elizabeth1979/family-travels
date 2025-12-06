@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useMemo, useRef, useState, createContext, useContext } from "react"
 import * as THREE from "three"
-import { Canvas, useFrame } from "@react-three/fiber"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import {
     OrbitControls,
     Environment,
@@ -22,6 +22,16 @@ function useCard() {
     const ctx = useContext(CardContext)
     if (!ctx) throw new Error("useCard must be used within CardProvider")
     return ctx
+}
+
+/* =========================
+   Camera Context for focus navigation
+   ========================= */
+
+const CameraContext = createContext(undefined)
+
+function useCamera() {
+    return useContext(CameraContext)
 }
 
 function CardProvider({ children, initialCards }) {
@@ -94,6 +104,70 @@ function Starfield() {
 }
 
 /* =========================
+   Camera Controller (provides camera focus)
+   ========================= */
+
+function CameraController({ children }) {
+    const controlsRef = useRef(null)
+    const { camera } = useThree()
+    const targetPosition = useRef(null)
+    const isAnimating = useRef(false)
+
+    // Animate camera to target position
+    useFrame(() => {
+        if (targetPosition.current && isAnimating.current && controlsRef.current) {
+            const target = targetPosition.current
+            const controls = controlsRef.current
+
+            // Smoothly interpolate the controls target
+            controls.target.lerp(target, 0.05)
+
+            // Calculate ideal camera position (offset from target)
+            const direction = new THREE.Vector3()
+            direction.subVectors(camera.position, controls.target).normalize()
+            const idealDistance = 20
+            const idealPosition = new THREE.Vector3()
+            idealPosition.copy(target).addScaledVector(direction, idealDistance)
+
+            // Smoothly move camera
+            camera.position.lerp(idealPosition, 0.05)
+
+            // Check if we're close enough to stop animating
+            if (controls.target.distanceTo(target) < 0.1) {
+                isAnimating.current = false
+                targetPosition.current = null
+            }
+
+            controls.update()
+        }
+    })
+
+    const focusOnPosition = (pos) => {
+        targetPosition.current = new THREE.Vector3(pos.x, pos.y, pos.z)
+        isAnimating.current = true
+    }
+
+    return (
+        <CameraContext.Provider value={{ focusOnPosition }}>
+            <OrbitControls
+                ref={controlsRef}
+                enablePan
+                enableZoom
+                enableRotate
+                minDistance={5}
+                maxDistance={60}
+                autoRotate={false}
+                autoRotateSpeed={0.5}
+                rotateSpeed={0.5}
+                zoomSpeed={1.2}
+                panSpeed={0.8}
+            />
+            {children}
+        </CameraContext.Provider>
+    )
+}
+
+/* =========================
    Floating Card (inlined)
    ========================= */
 
@@ -106,6 +180,7 @@ function FloatingCard({
     const [hovered, setHovered] = useState(false)
     const hoverTimeoutRef = useRef(null)
     const { setSelectedCard } = useCard()
+    const cameraContext = useCamera()
 
     useFrame(({ camera }) => {
         if (groupRef.current) {
@@ -166,10 +241,18 @@ function FloatingCard({
                         cursor: 'pointer',
                     }}
                 >
-                    {/* Visual card - no scale transform to avoid pointer event issues */}
-                    <div
-                        className="rounded-lg overflow-hidden shadow-lg bg-[#1F2121] p-1 select-none cursor-pointer"
-                        onClick={handleClick}
+                    {/* Visual card - wrapped in anchor for keyboard accessibility */}
+                    <a
+                        href={card.id ? `album.html?id=${card.id}` : '#'}
+                        className="rounded-lg overflow-hidden shadow-lg bg-[#1F2121] p-1 select-none cursor-pointer block"
+                        onFocus={() => {
+                            // Animate camera to bring this card into view when focused via keyboard
+                            if (cameraContext?.focusOnPosition) {
+                                cameraContext.focusOnPosition(position)
+                            }
+                            setHovered(true)
+                        }}
+                        onBlur={() => setHovered(false)}
                         style={{
                             width: '320px',
                             height: '400px',
@@ -179,6 +262,7 @@ function FloatingCard({
                                 : "0 6px 12px rgba(0, 0, 0, 0.6)",
                             border: hovered ? "2px solid rgba(49, 184, 198, 0.8)" : "1px solid rgba(255, 255, 255, 0.1)",
                             position: 'relative',
+                            textDecoration: 'none',
                         }}
                     >
                         <img
@@ -214,7 +298,7 @@ function FloatingCard({
                                 {card.title}
                             </p>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </Html>
         </group>
@@ -402,19 +486,9 @@ export default function StellarCardGallery({ cards }) {
                         <ambientLight intensity={0.4} />
                         <pointLight position={[10, 10, 10]} intensity={0.6} />
                         <pointLight position={[-10, -10, -10]} intensity={0.3} />
-                        <CardGalaxy />
-                        <OrbitControls
-                            enablePan
-                            enableZoom
-                            enableRotate
-                            minDistance={5}
-                            maxDistance={60}
-                            autoRotate={false}
-                            autoRotateSpeed={0.5}
-                            rotateSpeed={0.5}
-                            zoomSpeed={1.2}
-                            panSpeed={0.8}
-                        />
+                        <CameraController>
+                            <CardGalaxy />
+                        </CameraController>
                     </Suspense>
                 </Canvas>
 
