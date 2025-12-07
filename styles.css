@@ -1358,6 +1358,15 @@ header nav {
 }
 
 /* PhotoSwipe customization */
+.pswp__bg {
+    background: #000 !important;
+    opacity: 1 !important;
+}
+
+.pswp {
+    --pswp-bg: #000;
+}
+
 .pswp__button--close {
     /* Make close button larger to cover Google Drive's popout button */
     width: 52px !important;

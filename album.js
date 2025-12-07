@@ -484,10 +484,13 @@ function initPhotoSwipe() {
       iframe.src = videoUrl;
       iframe.frameBorder = '0';
       iframe.allow = 'autoplay';
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
+      // Use max dimensions to preserve aspect ratio within the container
+      iframe.style.maxWidth = '100%';
+      iframe.style.maxHeight = '100%';
+      iframe.style.width = '90vw';
+      iframe.style.height = '80vh';
+      iframe.style.aspectRatio = '16 / 9';
       iframe.style.border = 'none';
-      iframe.style.objectFit = 'contain';
 
       wrapper.appendChild(iframe);
       content.element = wrapper;
