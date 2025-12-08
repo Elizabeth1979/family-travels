@@ -15,6 +15,16 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        assetsDir: 'assets'
+        assetsDir: 'assets',
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'three': ['three'],
+                    'react-three': ['@react-three/fiber', '@react-three/drei'],
+                    'react-vendor': ['react', 'react-dom']
+                }
+            }
+        }
     }
 })
