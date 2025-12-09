@@ -1384,19 +1384,60 @@ header nav {
     transform: scale(1.1);
 }
 
-.pswp__alt-button {
-    background: rgba(0, 0, 0, 0.5);
-    color: var(--text-inverse);
-    border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
+/* PhotoSwipe Caption Overlay */
+.pswp__caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.6) 70%, transparent 100%);
+    padding: 3rem 2rem 1.5rem;
+    text-align: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10;
 }
 
-.pswp__alt-button:hover {
-    background: rgba(0, 0, 0, 0.8);
+.pswp__caption--hidden {
+    opacity: 0;
+    transform: translateY(100%);
+    pointer-events: none;
+}
+
+.pswp__caption-content {
+    color: #ffffff;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ALT Button in PhotoSwipe toolbar */
+.pswp__button--alt-button {
+    width: 44px !important;
+    height: 44px !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 50%;
+    margin: 8px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.pswp__button--alt-button:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: scale(1.1);
+}
+
+.pswp__button--alt-button.pswp__button--active {
+    background: rgba(49, 184, 198, 0.8) !important;
+}
+
+.pswp__button--alt-button svg {
+    width: 20px;
+    height: 20px;
+    stroke: #ffffff;
 }
 
 /* Fix video iframe aspect ratio in PhotoSwipe */

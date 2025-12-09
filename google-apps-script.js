@@ -7,7 +7,7 @@
 const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 
 // Set to true to enable AI-generated alt text for images without descriptions
-const ENABLE_AI_ALT_TEXT = false;  // Disabled for performance
+const ENABLE_AI_ALT_TEXT = false;  // Disabled - enable after testing
 
 // ============================================
 // MAIN FUNCTION
@@ -24,7 +24,7 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({
           error: 'No master folder ID provided'
         }))
-        .setMimeType(ContentService.MimeType.JSON);
+          .setMimeType(ContentService.MimeType.JSON);
       }
       return listAlbums(masterId);
     }
@@ -35,12 +35,13 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify({
         error: 'No folder ID provided'
       }))
-      .setMimeType(ContentService.MimeType.JSON);
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const items = [];
+    const filesToProcess = []; // Track files needing AI descriptions
 
     while (files.hasNext()) {
       const file = files.next();
@@ -50,14 +51,9 @@ function doGet(e) {
         const fileId = file.getId();
         let fileDescription = file.getDescription() || '';
 
-        // Generate AI description for images without manual description
+        // Track images that need AI descriptions (but don't block on it)
         if (!fileDescription && mimeType.startsWith('image/') && ENABLE_AI_ALT_TEXT && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
-          try {
-            fileDescription = generateAIDescription(fileId);
-          } catch (error) {
-            Logger.log('AI description generation failed: ' + error);
-            // Continue without AI description
-          }
+          filesToProcess.push(fileId);
         }
 
         items.push({
@@ -66,11 +62,34 @@ function doGet(e) {
           mime: mimeType,
           size: file.getSize(),
           created: file.getDateCreated(),
-          description: fileDescription,  // Use as alt text
+          description: fileDescription,  // Use as alt text (may be empty first time)
           src: mimeType.startsWith('image/')
             ? `https://lh3.googleusercontent.com/d/${fileId}=s2000`
             : `https://drive.google.com/uc?export=view&id=${fileId}`
         });
+      }
+    }
+
+    // Process AI descriptions only if enabled and we have files to process
+    if (ENABLE_AI_ALT_TEXT && filesToProcess.length > 0) {
+      const MAX_AI_DESCRIPTIONS_PER_REQUEST = 3;
+      let processedCount = 0;
+
+      for (const fileId of filesToProcess) {
+        if (processedCount >= MAX_AI_DESCRIPTIONS_PER_REQUEST) break;
+
+        try {
+          const description = generateAIDescription(fileId);
+          if (description) {
+            const item = items.find(i => i.id === fileId);
+            if (item) {
+              item.description = description;
+            }
+            processedCount++;
+          }
+        } catch (error) {
+          Logger.log('AI description failed for ' + fileId + ': ' + error);
+        }
       }
     }
 
@@ -79,13 +98,13 @@ function doGet(e) {
       count: items.length,
       folder: folder.getName()
     }))
-    .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({
       error: error.toString()
     }))
-    .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -182,7 +201,7 @@ function listAlbums(masterId) {
     return ContentService.createTextOutput(JSON.stringify({
       error: error.toString()
     }))
-    .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -241,7 +260,13 @@ function generateAIDescription(fileId) {
 
     if (result.candidates && result.candidates[0] && result.candidates[0].content) {
       const description = result.candidates[0].content.parts[0].text.trim();
-      Logger.log('Generated description: ' + description);
+
+      // Save description to Google Drive file so it persists for future views
+      if (description) {
+        file.setDescription(description);
+        Logger.log('Saved description to file: ' + description);
+      }
+
       return description;
     }
 
