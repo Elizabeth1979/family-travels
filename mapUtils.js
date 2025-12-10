@@ -92,7 +92,7 @@ export function getLeafletLayers() {
  * @param {string} providerKey - Key from MAP_PROVIDERS (e.g., 'light', 'dark')
  * @returns {L.TileLayer} Configured tile layer
  */
-function createTileLayer(providerKey = 'light') {
+export function createTileLayer(providerKey = 'light') {
   if (typeof L === 'undefined') {
     console.error('Leaflet library not loaded');
     return null;
@@ -313,7 +313,7 @@ export async function loadLeaflet() {
  * @param {Object} customOptions - Custom options to merge
  * @returns {Object} Map options for current library
  */
-function createMapOptions(customOptions = {}) {
+export function createMapOptions(customOptions = {}) {
   // Check which library is loaded or should be loaded
   const preference = getMapPreference();
 

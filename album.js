@@ -1,3 +1,7 @@
+import { fetchAlbums } from './utils.js';
+import { CONFIG } from './config.js';
+import { createTileLayer, createMapOptions } from './mapUtils.js';
+
 // Album page JavaScript
 let currentAlbum = null;
 let galleryItems = [];
