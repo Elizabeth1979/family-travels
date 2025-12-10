@@ -1247,9 +1247,10 @@ header nav {
     transition: opacity 0.4s ease-out;
 }
 
-/* Hide shimmer when image is loaded */
-.gallery-item:has(.gallery-media:not(.loading))::after {
-    opacity: 0;
+/* Hide shimmer when image is loaded - with fallback for browsers without :has() */
+.gallery-item:has(.gallery-media:not(.loading))::after,
+.gallery-item.gallery-item-loaded::after {
+  opacity: 0;
 }
 
 @keyframes shimmer {

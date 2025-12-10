@@ -121,7 +121,7 @@ function displayAlbumInfo() {
 }
 
 // Initialize the small map showing album location
-function initAlbumMap() {
+function initAlbumMap(retryCount = 0) {
   // Check if currentAlbum has coordinates
   if (!currentAlbum || !currentAlbum.lat || !currentAlbum.lng) {
     console.warn("Cannot initialize map: missing coordinates", {
@@ -132,38 +132,61 @@ function initAlbumMap() {
     return;
   }
 
+  const mapContainer = document.getElementById("album-map");
+
+  // Check if container has dimensions (important for mobile)
+  if (mapContainer && (mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0)) {
+    if (retryCount < 3) {
+      console.log(`Map container not ready, retrying... (attempt ${retryCount + 1})`);
+      setTimeout(() => initAlbumMap(retryCount + 1), 200);
+      return;
+    }
+    console.warn("Map container still has no dimensions after retries");
+  }
+
   // Clean up existing map if present
   if (albumMap) {
     albumMap.remove();
     albumMap = null;
   }
 
-  albumMap = L.map("album-map", createMapOptions({
-    center: [currentAlbum.lat, currentAlbum.lng],
-    zoom: 12,
-    scrollWheelZoom: false,
-    dragging: false,
-    zoomControl: false,
-  }));
+  try {
+    albumMap = L.map("album-map", createMapOptions({
+      center: [currentAlbum.lat, currentAlbum.lng],
+      zoom: 12,
+      scrollWheelZoom: false,
+      dragging: false,
+      zoomControl: false,
+    }));
 
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
 
-  // Add base layer
-  createTileLayer(currentTheme).addTo(albumMap);
+    // Add base layer
+    createTileLayer(currentTheme).addTo(albumMap);
 
-  // Add labels if dark mode (Satellite)
-  if (currentTheme === 'dark') {
-    createTileLayer('labels').addTo(albumMap);
-  }
+    // Add labels if dark mode (Satellite)
+    if (currentTheme === 'dark') {
+      createTileLayer('labels').addTo(albumMap);
+    }
 
-  L.marker([currentAlbum.lat, currentAlbum.lng], {
-    title: currentAlbum.title,
-  }).addTo(albumMap);
+    L.marker([currentAlbum.lat, currentAlbum.lng], {
+      title: currentAlbum.title,
+    }).addTo(albumMap);
 
-  // Set Google Maps link
-  const mapLink = document.getElementById("map-link");
-  if (mapLink) {
-    mapLink.href = `https://www.google.com/maps/search/?api=1&query=${currentAlbum.lat},${currentAlbum.lng}`;
+    // Set Google Maps link
+    const mapLink = document.getElementById("map-link");
+    if (mapLink) {
+      mapLink.href = `https://www.google.com/maps/search/?api=1&query=${currentAlbum.lat},${currentAlbum.lng}`;
+    }
+
+    // Force map to recalculate size after initialization (helps on mobile)
+    setTimeout(() => {
+      if (albumMap) {
+        albumMap.invalidateSize();
+      }
+    }, 100);
+  } catch (error) {
+    console.error("Failed to initialize map:", error);
   }
 }
 
@@ -292,137 +315,24 @@ function renderGallery() {
   const galleryEl = document.getElementById("gallery");
   galleryEl.innerHTML = "";
 
-  let lastType = null; // Track if we've switched from images to videos
-  let itemCount = 0; // Track item index for staggered animation
+  // Progressive rendering: render first batch immediately, defer rest
+  const FIRST_BATCH_SIZE = 8;
+  const firstBatch = galleryItems.slice(0, FIRST_BATCH_SIZE);
+  const remainingItems = galleryItems.slice(FIRST_BATCH_SIZE);
 
-  galleryItems.forEach((item, index) => {
-    const isVideo = item.mime && item.mime.startsWith("video/");
+  let lastType = null;
+  let itemCount = 0;
 
-    // Add section header when we switch from images to videos
-    if (lastType === false && isVideo === true) {
-      const videoSectionHeader = document.createElement("div");
-      videoSectionHeader.className = "section-header";
-      videoSectionHeader.innerHTML = '<h2>Videos</h2>';
-      galleryEl.appendChild(videoSectionHeader);
-      itemCount = 0; // Reset count for video section
-    } else if (lastType === null && isVideo === false) {
-      // Add Photos header at the beginning if we have images
-      const photoSectionHeader = document.createElement("div");
-      photoSectionHeader.className = "section-header";
-      photoSectionHeader.innerHTML = '<h2>Photos</h2>';
-      galleryEl.appendChild(photoSectionHeader);
-    } else if (lastType === null && isVideo === true) {
-      // Only videos in album
-      const videoSectionHeader = document.createElement("div");
-      videoSectionHeader.className = "section-header";
-      videoSectionHeader.innerHTML = '<h2>Videos</h2>';
-      galleryEl.appendChild(videoSectionHeader);
-    }
-
-    lastType = isVideo;
-
-    const galleryItem = document.createElement("a");
-    galleryItem.href = item.src;
-    // Start hidden for staggered reveal animation
-    galleryItem.className = "gallery-item gallery-item-hidden";
-    galleryItem.setAttribute("data-index", index);
-    galleryItem.setAttribute("role", "listitem");
-    // Set animation delay based on position for cascade effect
-    galleryItem.style.animationDelay = `${itemCount * 50}ms`;
-    itemCount++;
-
-    if (isVideo) {
-      // For videos, try to get thumbnail from Google Drive
-      const videoThumbnail = document.createElement("img");
-      videoThumbnail.className = "gallery-media loading";
-      videoThumbnail.setAttribute("loading", "lazy");
-
-      // Extract file ID from Google Drive URL
-      let thumbnailUrl = null;
-      const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        const fileId = fileIdMatch[1];
-        // Use Google Drive thumbnail API (size options: s220, s400, s640, s1600)
-        thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-      }
-
-      if (thumbnailUrl) {
-        videoThumbnail.src = thumbnailUrl;
-        // Use description as alt text if available, otherwise empty (will be generated by AI)
-        videoThumbnail.alt = item.description || "";
-
-        // Progressive loading: fade in when loaded
-        videoThumbnail.onload = () => {
-          videoThumbnail.classList.remove('loading');
-        };
-
-        // Fallback to gradient placeholder if thumbnail fails to load
-        videoThumbnail.onerror = () => {
-          videoThumbnail.style.display = 'none';
-          const placeholder = document.createElement("div");
-          placeholder.className = "gallery-media video-placeholder";
-          galleryItem.insertBefore(placeholder, galleryItem.firstChild);
-        };
-      } else {
-        // Use gradient placeholder if we can't extract file ID
-        videoThumbnail.style.display = 'none';
-        const placeholder = document.createElement("div");
-        placeholder.className = "gallery-media video-placeholder";
-        galleryItem.appendChild(placeholder);
-      }
-
-      // Add video icon/text
-      const videoLabel = document.createElement("div");
-      videoLabel.className = "video-label";
-      videoLabel.textContent = "VIDEO";
-
-      const playIcon = document.createElement("div");
-      playIcon.className = "play-icon";
-      playIcon.innerHTML = "▶";
-
-      galleryItem.appendChild(videoThumbnail);
-      galleryItem.appendChild(videoLabel);
-      galleryItem.appendChild(playIcon);
-      galleryItem.setAttribute("data-pswp-type", "video");
-    } else {
-      // Image thumbnail
-      const img = document.createElement("img");
-
-      // Use Google Drive thumbnail URL which is more reliable than lh3 links
-      // and doesn't have the same referrer/expiration issues
-      if (item.id) {
-        img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w2000`;
-      } else {
-        img.src = item.src;
-      }
-
-      // Use description as alt text if available, otherwise empty (will be generated by AI)
-      img.alt = item.description || "";
-      img.className = "gallery-media loading";
-      img.setAttribute("loading", "lazy");
-
-      // Progressive loading: fade in when loaded
-      img.onload = () => {
-        img.classList.remove('loading');
-      };
-
-      // Fallback in case even the thumbnail fails
-      img.onerror = () => {
-        console.warn(`Image failed to load: ${img.src}`);
-        img.classList.remove('loading');
-        // Try the original src as a last resort if we weren't already using it
-        if (img.src.includes('drive.google.com/thumbnail') && item.src && item.src !== img.src) {
-          img.src = item.src;
-        }
-      };
-
-      galleryItem.appendChild(img);
-    }
-
-    galleryEl.appendChild(galleryItem);
+  // Render first batch immediately for fast initial paint
+  firstBatch.forEach((item, index) => {
+    const result = createGalleryItem(item, index, lastType, itemCount);
+    galleryEl.appendChild(result.element);
+    if (result.header) galleryEl.insertBefore(result.header, result.element);
+    lastType = result.isVideo;
+    itemCount = result.itemCount;
   });
 
-  // Trigger staggered reveal animation after items are in the DOM
+  // Trigger reveal animation for first batch
   requestAnimationFrame(() => {
     const hiddenItems = galleryEl.querySelectorAll('.gallery-item-hidden');
     hiddenItems.forEach(item => {
@@ -430,6 +340,134 @@ function renderGallery() {
       item.classList.add('gallery-item-visible');
     });
   });
+
+  // Render remaining items after first paint
+  if (remainingItems.length > 0) {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        remainingItems.forEach((item, i) => {
+          const index = FIRST_BATCH_SIZE + i;
+          const result = createGalleryItem(item, index, lastType, itemCount);
+          if (result.header) galleryEl.appendChild(result.header);
+          galleryEl.appendChild(result.element);
+          lastType = result.isVideo;
+          itemCount = result.itemCount;
+          // Reveal immediately since we're adding after initial load
+          result.element.classList.remove('gallery-item-hidden');
+          result.element.classList.add('gallery-item-visible');
+        });
+      }, 100); // Small delay to let first batch render
+    });
+  }
+}
+
+// Create a single gallery item element
+function createGalleryItem(item, index, lastType, itemCount) {
+  const isVideo = item.mime && item.mime.startsWith("video/");
+  let header = null;
+
+  // Add section header when we switch from images to videos
+  if (lastType === false && isVideo === true) {
+    header = document.createElement("div");
+    header.className = "section-header";
+    header.innerHTML = '<h2>Videos</h2>';
+    itemCount = 0;
+  } else if (lastType === null && isVideo === false) {
+    header = document.createElement("div");
+    header.className = "section-header";
+    header.innerHTML = '<h2>Photos</h2>';
+  } else if (lastType === null && isVideo === true) {
+    header = document.createElement("div");
+    header.className = "section-header";
+    header.innerHTML = '<h2>Videos</h2>';
+  }
+
+  const galleryItem = document.createElement("a");
+  galleryItem.href = item.src;
+  galleryItem.className = "gallery-item gallery-item-hidden";
+  galleryItem.setAttribute("data-index", index);
+  galleryItem.setAttribute("role", "listitem");
+  galleryItem.style.animationDelay = `${itemCount * 50}ms`;
+  itemCount++;
+
+  if (isVideo) {
+    const videoThumbnail = document.createElement("img");
+    videoThumbnail.className = "gallery-media loading";
+    videoThumbnail.setAttribute("loading", "lazy");
+
+    let thumbnailUrl = null;
+    const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w400`;
+    }
+
+    if (thumbnailUrl) {
+      videoThumbnail.src = thumbnailUrl;
+      videoThumbnail.alt = item.description || "";
+
+      videoThumbnail.onload = () => {
+        videoThumbnail.classList.remove('loading');
+        galleryItem.classList.add('gallery-item-loaded');
+      };
+
+      videoThumbnail.onerror = () => {
+        videoThumbnail.style.display = 'none';
+        const placeholder = document.createElement("div");
+        placeholder.className = "gallery-media video-placeholder";
+        galleryItem.insertBefore(placeholder, galleryItem.firstChild);
+        galleryItem.classList.add('gallery-item-loaded');
+      };
+    } else {
+      videoThumbnail.style.display = 'none';
+      const placeholder = document.createElement("div");
+      placeholder.className = "gallery-media video-placeholder";
+      galleryItem.appendChild(placeholder);
+    }
+
+    const videoLabel = document.createElement("div");
+    videoLabel.className = "video-label";
+    videoLabel.textContent = "VIDEO";
+
+    const playIcon = document.createElement("div");
+    playIcon.className = "play-icon";
+    playIcon.innerHTML = "▶";
+
+    galleryItem.appendChild(videoThumbnail);
+    galleryItem.appendChild(videoLabel);
+    galleryItem.appendChild(playIcon);
+    galleryItem.setAttribute("data-pswp-type", "video");
+  } else {
+    const img = document.createElement("img");
+
+    // Use smaller thumbnail (400px) for gallery grid - much faster loading
+    if (item.id) {
+      img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w400`;
+    } else {
+      img.src = item.src;
+    }
+
+    img.alt = item.description || "";
+    img.className = "gallery-media loading";
+    img.setAttribute("loading", "lazy");
+
+    img.onload = () => {
+      img.classList.remove('loading');
+      galleryItem.classList.add('gallery-item-loaded');
+    };
+
+    img.onerror = () => {
+      console.warn(`Image failed to load: ${img.src}`);
+      img.classList.remove('loading');
+      galleryItem.classList.add('gallery-item-loaded');
+      if (img.src.includes('drive.google.com/thumbnail') && item.src && item.src !== img.src) {
+        img.src = item.src;
+      }
+    };
+
+    galleryItem.appendChild(img);
+  }
+
+  return { element: galleryItem, header, isVideo, itemCount };
 }
 
 // Initialize PhotoSwipe lightbox
