@@ -2,39 +2,37 @@
 let map;
 let albums = [];
 let markers = [];
-let currentMapType = 'globe'; // 'globe' (Globe.GL), 'enhanced' (MapLibre), or 'accessible' (Leaflet)
+let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
 let mapState = {
     center: { lat: 20, lng: 0 },
     zoom: 2
 };
 
-// Initialize the map container immediately while album data loads in background
+// Initialize the map/gallery based on user preference
 async function initMap() {
-    if (map) return; // Already initialized
-
     // Get user preference
-    currentMapType = getMapPreference();
-    console.log('Initializing map with type:', currentMapType);
+    currentMapType = getMapPreference() || 'accessible';
+    // Normalize old preferences to new options
+    if (currentMapType === 'globe' || currentMapType === 'enhanced') {
+        currentMapType = 'gallery'; // Old globe users get gallery
+    }
+    console.log('Initializing view with type:', currentMapType);
 
     // Update toggle UI to match preference
     updateToggleUI(currentMapType);
 
     try {
-        if (currentMapType === 'globe') {
-            document.body.classList.add('globe-view');
-            await initGlobeMap();
-        } else if (currentMapType === 'accessible') {
-            await initLeafletMap();
+        if (currentMapType === 'gallery') {
+            document.body.classList.add('gallery-view');
+            await initGalleryView();
         } else {
-            await initMapLibreMap();
+            document.body.classList.remove('gallery-view');
+            await initLeafletMap();
         }
     } catch (error) {
-        console.error('Failed to initialize preferred map, falling back:', error);
-        // Fallback to Leaflet if Globe or MapLibre fails
-        if (currentMapType === 'globe' || currentMapType === 'enhanced') {
-            currentMapType = 'accessible';
-            await initLeafletMap();
-        }
+        console.error('Failed to initialize preferred view, falling back to map:', error);
+        currentMapType = 'accessible';
+        await initLeafletMap();
     }
 
     // Try to show pins from cache immediately
@@ -42,61 +40,24 @@ async function initMap() {
     if (cachedAlbums && cachedAlbums.length > 0) {
         albums = cachedAlbums;
         populateAlbumList();
-        renderMarkers();
+        if (currentMapType === 'accessible') {
+            renderMarkers();
+        }
     }
 
     // Then fetch fresh data in background
     loadAlbumsAndMarkers();
 }
 
-// Initialize MapLibre GL (3D Enhanced) map
-async function initMapLibreMap() {
-    console.log('Initializing MapLibre GL map');
-
-    if (typeof maplibregl === 'undefined') {
-        throw new Error('MapLibre GL not loaded');
+// Initialize 3D Gallery view
+async function initGalleryView() {
+    console.log('Initializing 3D Gallery');
+    // Gallery is mounted via React when albums are loaded
+    // Just ensure the container is ready
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+        mapContainer.innerHTML = ''; // Clear any existing content
     }
-
-    const options = createMapLibreOptions();
-    console.log('MapLibre options:', options);
-
-    map = new maplibregl.Map(options);
-    console.log('MapLibre map instance created:', map);
-
-    // Add navigation controls (zoom, rotation, pitch)
-    map.addControl(new maplibregl.NavigationControl({
-        visualizePitch: true,
-        showZoom: true,
-        showCompass: true
-    }), 'top-right');
-
-    // Note: MapStyleControl removed - using map type toggle instead
-    // All demo tiles point to same style anyway
-
-    // Wait for map to load before adding features
-    map.on('load', () => {
-        console.log('MapLibre map loaded successfully');
-
-        // Enable 3D terrain by default (may not work with demo tiles)
-        try {
-            if (map.getSource('terrain')) {
-                map.setTerrain({
-                    source: 'terrain',
-                    exaggeration: 2.0
-                });
-                console.log('3D terrain enabled');
-            }
-        } catch (error) {
-            console.log('Terrain not available with current style');
-        }
-
-        // Render markers after a short delay
-        setTimeout(() => {
-            if (albums.length > 0) {
-                renderMarkers();
-            }
-        }, 300);
-    });
 }
 
 // Initialize Leaflet (Accessible) map
@@ -137,6 +98,11 @@ async function initLeafletMap() {
 
     console.log('Leaflet map initialized successfully');
 
+    // Fix sizing issue on mobile reload - recalculate size after CSS is applied
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+
     // Render markers immediately
     if (albums.length > 0) {
         renderMarkers();
@@ -162,8 +128,16 @@ function getCachedAlbums() {
 async function loadAlbumsAndMarkers() {
     try {
         albums = await fetchAlbums();
-        renderMarkers();
         populateAlbumList();
+
+        // Render appropriate view based on current mode
+        if (currentMapType === 'gallery') {
+            if (typeof window.mountGallery === 'function') {
+                window.mountGallery('map', albums);
+            }
+        } else {
+            renderMarkers();
+        }
     } catch (error) {
         console.error('Error loading albums:', error);
         document.getElementById('album-list-items').innerHTML =
@@ -171,143 +145,20 @@ async function loadAlbumsAndMarkers() {
     }
 }
 
+
 function renderMarkers() {
-    if (currentMapType === 'globe') {
-        // Globe uses its own rendering system
-        renderGlobeMarkers();
-    } else {
-        if (!map) return;
+    if (!map) return;
 
-        // Clear existing markers
-        markers.forEach(marker => marker.remove());
-        markers = [];
+    // Clear existing markers
+    markers.forEach(marker => marker.remove());
+    markers = [];
 
-        if (currentMapType === 'enhanced') {
-            renderMapLibreMarkers();
-        } else {
-            renderLeafletMarkers();
-        }
-    }
-}
-
-// Render markers for MapLibre GL
-function renderMapLibreMarkers() {
-    const bounds = new maplibregl.LngLatBounds();
-
-    albums.forEach(album => {
-        if (typeof album.lat !== 'number' || typeof album.lng !== 'number') {
-            return;
-        }
-
-        // Create custom marker element
-        const el = createMarkerElement('#FF6B6B');
-        el.setAttribute('aria-label', `View ${album.title} album`);
-
-        // Create popup content
-        const popupContent = createPopupContent(album);
-
-        // Create popup with closeOnClick disabled so user can interact with it
-        const popup = new maplibregl.Popup({
-            offset: 25,
-            maxWidth: '300px',
-            className: 'custom-popup',
-            closeOnClick: false,
-            closeButton: true
-        }).setDOMContent(popupContent);
-
-        // Create marker
-        const marker = new maplibregl.Marker({
-            element: el,
-            anchor: 'bottom'
-        })
-            .setLngLat([album.lng, album.lat])
-            .setPopup(popup)
-            .addTo(map);
-
-        // Track if mouse is over popup
-        let isOverPopup = false;
-        let closeTimeout = null;
-
-        const scheduleClose = () => {
-            closeTimeout = setTimeout(() => {
-                if (!isOverPopup && popup.isOpen()) {
-                    popup.remove();
-                }
-            }, 300);
-        };
-
-        const cancelClose = () => {
-            if (closeTimeout) {
-                clearTimeout(closeTimeout);
-                closeTimeout = null;
-            }
-        };
-
-        // Open on marker hover
-        el.addEventListener('mouseenter', () => {
-            cancelClose();
-            if (!popup.isOpen()) {
-                marker.togglePopup();
-            }
-        });
-
-        el.addEventListener('mouseleave', () => {
-            scheduleClose();
-        });
-
-        // Track popup hover to keep it open
-        popup.on('open', () => {
-            const popupEl = popup.getElement();
-            if (popupEl) {
-                popupEl.addEventListener('mouseenter', () => {
-                    isOverPopup = true;
-                    cancelClose();
-                });
-                popupEl.addEventListener('mouseleave', () => {
-                    isOverPopup = false;
-                    scheduleClose();
-                });
-            }
-        });
-
-        // Add keyboard interaction with focus management
-        el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                marker.togglePopup();
-
-                // If popup is now open, focus the button inside it
-                if (popup.isOpen()) {
-                    setTimeout(() => {
-                        const popupEl = popup.getElement();
-                        if (popupEl) {
-                            const btn = popupEl.querySelector('.open-album-btn');
-                            if (btn) {
-                                btn.focus();
-                            }
-                        }
-                    }, 100);
-                }
-            }
-        });
-
-        markers.push(marker);
-        bounds.extend([album.lng, album.lat]);
-    });
-
-    // Fit map to markers if any exist
-    if (albums.length > 0) {
-        map.fitBounds(bounds, {
-            padding: { top: 50, bottom: 50, left: 50, right: 50 },
-            pitch: 40,
-            bearing: 0,
-            duration: 1500
-        });
-    }
+    renderLeafletMarkers();
 }
 
 // Render markers for Leaflet
 function renderLeafletMarkers() {
+
     const bounds = L.latLngBounds();
 
     albums.forEach(album => {
@@ -526,165 +377,43 @@ function initMenuToggle() {
     }
 }
 
-// Change map style dynamically
-function changeMapStyle(styleType) {
-    if (!map) return;
-
-    console.log('Changing map style to:', styleType);
-
-    // Get current map state
-    const center = map.getCenter();
-    const zoom = map.getZoom();
-    const pitch = map.getPitch();
-    const bearing = map.getBearing();
-
-    // Update the style
-    map.setStyle(createMapStyle(styleType));
-
-    // Wait for style to load, then restore state and markers
-    map.once('style.load', () => {
-        console.log('New style loaded');
-
-        // Re-enable terrain
-        try {
-            map.setTerrain({
-                source: 'terrain',
-                exaggeration: 2.0
-            });
-        } catch (error) {
-            console.error('Failed to re-enable terrain:', error);
-        }
-
-        // Restore camera position
-        map.jumpTo({
-            center: center,
-            zoom: zoom,
-            pitch: pitch,
-            bearing: bearing
-        });
-
-        // Re-render markers after a short delay
-        setTimeout(() => {
-            if (albums.length > 0) {
-                renderMarkers();
-            }
-        }, 300);
-    });
-}
-
-// Switch between map types (Enhanced vs Accessible)
-async function switchMapType(newType) {
-    if (newType === currentMapType) return; // Already using this type
-
-    console.log('Switching map type from', currentMapType, 'to', newType);
-
-    // Show loading indicator
-    showLoading('Switching map...');
-
-    // Save current map state
-    saveCurrentMapState();
-
-    // Destroy current map
-    destroyCurrentMap();
-
-    // Update current type
-    currentMapType = newType;
-    saveMapPreference(newType);
-
-    // Initialize new map
-    try {
-        if (newType === 'globe') {
-            document.body.classList.add('globe-view');
-            await initGlobeMap();
-        } else if (newType === 'accessible') {
-            document.body.classList.remove('globe-view');
-            await initLeafletMap();
-        } else {
-            document.body.classList.remove('globe-view');
-            await initMapLibreMap();
-        }
-
-        // Render markers
-        if (albums.length > 0) {
-            renderMarkers();
-        }
-
-        // Update toggle UI
-        updateToggleUI(newType);
-
-        // Announce to screen readers
-        const mapTypeName = newType === 'globe' ? '3D Gallery View' :
-            newType === 'accessible' ? 'accessible 2D map' :
-                '3D enhanced map';
-        announceToScreenReader(`Now viewing ${mapTypeName}`);
-
-        hideLoading();
-    } catch (error) {
-        console.error('Failed to switch map type:', error);
-        hideLoading();
-        alert('Failed to switch map type. Please try again.');
-    }
-}
 
 // Update map theme dynamically
 window.updateMapTheme = function (theme) {
     console.log('Updating map theme to:', theme);
 
-    if (!map) return;
+    if (!map || typeof L === 'undefined') return;
 
-    if (currentMapType === 'accessible' && typeof L !== 'undefined') {
-        // Get layers
-        const { baseMaps, overlayMaps } = getLeafletLayers();
+    // Get layers
+    const { baseMaps } = getLeafletLayers();
 
-        // Remove all current layers to ensure clean slate
-        map.eachLayer((layer) => {
-            if (layer instanceof L.TileLayer) {
-                map.removeLayer(layer);
-            }
-        });
-
-        // Determine which base layer to show
-        // We default to the standard theme map unless the user has manually selected something else?
-        // For simplicity in this update, we always switch to the theme-appropriate map
-        const newBaseLayer = theme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
-        newBaseLayer.addTo(map);
-
-        // Re-render markers to ensure they are on top
-        if (markers.length > 0) {
-            markers.forEach(marker => marker.remove());
-            renderMarkers();
+    // Remove all current tile layers
+    map.eachLayer((layer) => {
+        if (layer instanceof L.TileLayer) {
+            map.removeLayer(layer);
         }
-    } else if (currentMapType === 'enhanced' && typeof maplibregl !== 'undefined') {
-        // For standard MapLibre style, we can invert colors for dark mode using CSS filter on canvas
-        const canvas = map.getCanvas();
-        if (theme === 'dark') {
-            canvas.style.filter = 'invert(100%) hue-rotate(180deg) contrast(90%)';
-        } else {
-            canvas.style.filter = 'none';
-        }
+    });
+
+    // Add the theme-appropriate base layer
+    const newBaseLayer = theme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
+    newBaseLayer.addTo(map);
+
+    // Re-render markers to ensure they are on top
+    if (markers.length > 0) {
+        markers.forEach(marker => marker.remove());
+        renderMarkers();
     }
 };
 
+
 // Save current map state before destroying
 function saveCurrentMapState() {
-    if (currentMapType === 'globe') {
-        // Globe doesn't need state saving for now
-        // Could save camera position in future if needed
-        return;
-    }
-
-    if (!map) return;
+    if (!map || typeof L === 'undefined') return;
 
     try {
-        if (currentMapType === 'enhanced' && typeof maplibregl !== 'undefined') {
-            const center = map.getCenter();
-            mapState.center = { lat: center.lat, lng: center.lng };
-            mapState.zoom = map.getZoom();
-        } else if (currentMapType === 'accessible' && typeof L !== 'undefined') {
-            const center = map.getCenter();
-            mapState.center = { lat: center.lat, lng: center.lng };
-            mapState.zoom = map.getZoom();
-        }
+        const center = map.getCenter();
+        mapState.center = { lat: center.lat, lng: center.lng };
+        mapState.zoom = map.getZoom();
     } catch (error) {
         console.warn('Failed to save map state:', error);
     }
@@ -692,14 +421,6 @@ function saveCurrentMapState() {
 
 // Destroy current map instance
 function destroyCurrentMap() {
-    if (currentMapType === 'globe') {
-        // Destroy globe using its own cleanup function
-        if (typeof destroyGlobe === 'function') {
-            destroyGlobe();
-        }
-        return;
-    }
-
     if (!map) return;
 
     try {
@@ -715,17 +436,6 @@ function destroyCurrentMap() {
     }
 }
 
-// Update toggle UI to reflect current map type
-function updateToggleUI(mapType) {
-    const buttons = document.querySelectorAll('.map-type-btn');
-    buttons.forEach(btn => {
-        const btnType = btn.getAttribute('data-map-type');
-        const isActive = btnType === mapType;
-
-        btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-checked', isActive.toString());
-    });
-}
 
 // Show loading indicator
 function showLoading(message = 'Loading map...') {
@@ -761,15 +471,83 @@ function announceToScreenReader(message) {
     }, 1000);
 }
 
-// =============================================================================
-// CRITICAL: DO NOT MODIFY THIS FUNCTION WITHOUT CAREFUL REVIEW
-// This handles the map type toggle initialization. The async timing with
-// React is critical for the toggle buttons to appear.
-// =============================================================================
+// Switch between map types (2D Map vs 3D Gallery)
+async function switchMapType(newType) {
+    if (newType === currentMapType) return; // Already using this type
+
+    console.log('Switching view from', currentMapType, 'to', newType);
+
+    // Show loading indicator
+    showLoading('Switching view...');
+
+    // Save current map state if switching from map
+    if (currentMapType === 'accessible') {
+        saveCurrentMapState();
+        destroyCurrentMap();
+    }
+
+    // Update current type
+    currentMapType = newType;
+    saveMapPreference(newType);
+
+    // Initialize new view
+    try {
+        if (newType === 'gallery') {
+            document.body.classList.add('gallery-view');
+            await initGalleryView();
+            // Mount the React gallery
+            if (albums.length > 0 && typeof window.mountGallery === 'function') {
+                window.mountGallery('map', albums);
+            }
+        } else {
+            document.body.classList.remove('gallery-view');
+            // Clear the gallery content
+            const mapContainer = document.getElementById('map');
+            if (mapContainer) {
+                mapContainer.innerHTML = '';
+            }
+            await initLeafletMap();
+            // Render markers
+            if (albums.length > 0) {
+                renderMarkers();
+            }
+        }
+
+        // Update toggle UI
+        updateToggleUI(newType);
+
+        // Announce to screen readers
+        const viewName = newType === 'gallery' ? '3D Gallery' : '2D Map';
+        announceToScreenReader(`Now viewing ${viewName}`);
+
+        hideLoading();
+    } catch (error) {
+        console.error('Failed to switch view type:', error);
+        hideLoading();
+        alert('Failed to switch view. Please try again.');
+    }
+}
+
+// Update toggle UI to reflect current view type
+function updateToggleUI(mapType) {
+    const buttons = document.querySelectorAll('.map-type-btn');
+    buttons.forEach(btn => {
+        const btnType = btn.getAttribute('data-map-type');
+        const isActive = btnType === mapType;
+
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-checked', isActive.toString());
+    });
+
+    // Also update React toggle if it exists
+    if (window.setMapToggleValue) {
+        window.setMapToggleValue(mapType);
+    }
+}
+
 // Initialize map type toggle
 function initMapTypeToggle() {
     // Helper to wait for global functions (React module loads async)
-    // DO NOT REMOVE - This is critical for the toggle to load correctly
     const waitForGlobal = async (name, timeout = 5000) => {
         const start = Date.now();
         return new Promise((resolve, reject) => {
@@ -797,27 +575,6 @@ function initMapTypeToggle() {
     }).catch(error => {
         console.error('Failed to load map toggle:', error);
     });
-
-    // Open album list button
-    const openAlbumBtn = document.getElementById('open-album-list');
-    if (openAlbumBtn) {
-        openAlbumBtn.addEventListener('click', () => {
-            const menuToggle = document.getElementById('menu-toggle');
-            if (menuToggle) {
-                menuToggle.click();
-            }
-        });
-    }
-
-    // Rotation toggle button for globe
-    const rotationToggle = document.getElementById('rotation-toggle');
-    if (rotationToggle) {
-        rotationToggle.addEventListener('click', () => {
-            if (typeof toggleGlobeRotation === 'function') {
-                toggleGlobeRotation();
-            }
-        });
-    }
 }
 
 // Initialize map when page loads

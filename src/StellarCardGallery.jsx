@@ -34,6 +34,26 @@ function useCamera() {
     return useContext(CameraContext)
 }
 
+/* =========================
+   Responsive hook for mobile detection
+   ========================= */
+
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    return isMobile
+}
+
 function CardProvider({ children, initialCards }) {
     const [selectedCard, setSelectedCard] = useState(null)
     const [cards, setCards] = useState(initialCards || [])
@@ -155,7 +175,7 @@ function CameraController({ children }) {
                 enableZoom
                 enableRotate
                 minDistance={5}
-                maxDistance={60}
+                maxDistance={100}
                 autoRotate={false}
                 autoRotateSpeed={0.5}
                 rotateSpeed={0.5}
@@ -181,6 +201,13 @@ function FloatingCard({
     const hoverTimeoutRef = useRef(null)
     const { setSelectedCard } = useCard()
     const cameraContext = useCamera()
+    const isMobile = useIsMobile()
+
+    // Responsive card dimensions using vw for smooth scaling
+    // Desktop: ~320px, Mobile: scales with viewport
+    const cardWidth = isMobile ? 'min(200px, 55vw)' : 'min(320px, 25vw)'
+    const cardHeight = isMobile ? 'min(250px, 70vw)' : 'min(400px, 32vw)'
+    const titleFontSize = isMobile ? 'max(14px, 4vw)' : '24px'
 
     useFrame(({ camera }) => {
         if (groupRef.current) {
@@ -254,8 +281,8 @@ function FloatingCard({
                         }}
                         onBlur={() => setHovered(false)}
                         style={{
-                            width: '320px',
-                            height: '400px',
+                            width: cardWidth,
+                            height: cardHeight,
                             transition: 'box-shadow 0.3s ease, border 0.3s ease',
                             boxShadow: hovered
                                 ? "0 12px 24px rgba(49, 184, 198, 0.5), 0 0 30px rgba(49, 184, 198, 0.3)"
@@ -289,7 +316,7 @@ function FloatingCard({
                         >
                             <p style={{
                                 color: '#fff',
-                                fontSize: '24px',
+                                fontSize: titleFontSize,
                                 fontWeight: '700',
                                 textAlign: 'center',
                                 margin: 0,
@@ -416,6 +443,10 @@ function CardModal() {
 
 function CardGalaxy() {
     const { cards } = useCard()
+    const isMobile = useIsMobile()
+
+    // Responsive galaxy radius - smaller on mobile for proportional spacing
+    const galaxyRadius = isMobile ? 14 : 20
 
     const cardPositions = useMemo(() => {
         const positions = []
@@ -432,20 +463,17 @@ function CardGalaxy() {
             const x = Math.cos(theta) * radiusAtY
             const z = Math.sin(theta) * radiusAtY
 
-            // Radius of the galaxy sphere
-            const R = 20
-
             positions.push({
-                x: x * R,
-                y: y * R,
-                z: z * R,
+                x: x * galaxyRadius,
+                y: y * galaxyRadius,
+                z: z * galaxyRadius,
                 rotationX: 0,
                 rotationY: 0,
                 rotationZ: 0,
             })
         }
         return positions
-    }, [cards.length])
+    }, [cards.length, galaxyRadius])
 
     return (
         <>
@@ -469,12 +497,16 @@ function CardGalaxy() {
    ========================= */
 
 export default function StellarCardGallery({ cards }) {
+    const isMobile = useIsMobile()
+    // Mobile needs to start further back to see all smaller cards
+    const cameraZ = isMobile ? 45 : 55
+
     return (
         <CardProvider initialCards={cards}>
-            <div className="w-full h-full relative overflow-hidden bg-black">
+            <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#000' }}>
                 <Canvas
-                    camera={{ position: [0, 0, 35], fov: 60 }}
-                    className="absolute inset-0 z-10"
+                    camera={{ position: [0, 0, cameraZ], fov: 60 }}
+                    style={{ position: 'absolute', inset: 0 }}
                     onCreated={({ gl }) => {
                         gl.domElement.style.pointerEvents = "auto"
                     }}
@@ -493,11 +525,6 @@ export default function StellarCardGallery({ cards }) {
                 </Canvas>
 
                 <CardModal />
-
-                <div className="absolute top-4 left-4 z-20 text-white pointer-events-none">
-                    <h1 className="text-2xl font-bold mb-2">3D Travel Gallery</h1>
-                    <p className="text-sm opacity-70">Drag to explore • Scroll to zoom • Click cards to view details</p>
-                </div>
             </div>
         </CardProvider>
     )

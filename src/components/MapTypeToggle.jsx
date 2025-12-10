@@ -5,7 +5,7 @@ import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 const MapTypeToggle = ({ value, onValueChange }) => {
     const options = [
         {
-            id: "globe",
+            id: "gallery",
             label: "3D Gallery",
             icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -27,6 +27,7 @@ const MapTypeToggle = ({ value, onValueChange }) => {
             ),
         },
     ];
+
 
     return (
         <>

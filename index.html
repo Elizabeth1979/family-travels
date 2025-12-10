@@ -8,10 +8,6 @@
     <meta name="description" content="Explore our family travels through an interactive map">
     <meta name="referrer" content="no-referrer">
 
-    <!-- MapLibre GL CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="" />
-
-    <!-- Globe.GL CSS (if needed) -->
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -46,8 +42,7 @@
                     </svg>
                 </button>
 
-                <!-- Globe Rotation Control (only visible on globe view) -->
-                <!-- Globe Rotation Control moved to floating controls -->
+
             </div>
         </div>
     </header>
@@ -60,30 +55,7 @@
             <!-- Map Type Toggle Control (React Component) -->
             <div id="map-type-toggle" class="map-type-toggle"></div>
 
-            <!-- Globe Controls (Zoom & Rotation) -->
-            <div id="globe-controls" class="globe-controls hidden">
-                <button id="zoom-in" class="globe-control-btn" aria-label="Zoom in" title="Zoom in">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                </button>
-                <button id="zoom-out" class="globe-control-btn" aria-label="Zoom out" title="Zoom out">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                </button>
-                <button id="rotation-toggle" class="globe-control-btn" aria-label="Stop globe rotation"
-                    title="Stop rotation">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
-                        <rect x="6" y="4" width="4" height="16" rx="1" />
-                        <rect x="14" y="4" width="4" height="16" rx="1" />
-                    </svg>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="play-icon hidden">
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
-                </button>
-            </div>
+
 
             <!-- Loading Indicator -->
             <div id="map-loading" class="map-loading hidden" aria-live="polite" aria-atomic="true">
@@ -109,16 +81,12 @@
         </div>
     </main>
 
-    <!-- MapLibre GL JS -->
-    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
-
     <!-- React App Entry -->
     <script type="module" src="/src/main.jsx"></script>
 
     <script src="config.js"></script>
     <script src="utils.js"></script>
     <script src="mapUtils.js"></script>
-    <script src="globe.js"></script>
     <script src="map.js"></script>
     <script>
         // Theme Toggle Logic
