@@ -487,10 +487,6 @@ header nav {
     font-size: 1.4rem;
     font-weight: 700;
     color: var(--text-main);
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
     line-height: 1.3;
 }
 
@@ -505,14 +501,14 @@ header nav {
     display: block;
     width: 100%;
     padding: 14px 20px;
-    background: var(--primary-gradient);
-    color: var(--text-inverse);
+    background: #31b8c6;
+    color: #ffffff;
     text-decoration: none;
     border-radius: 12px;
     font-weight: 600;
     text-align: center;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px rgba(49, 184, 198, 0.3);
     font-size: 1rem;
 }
 

@@ -271,7 +271,7 @@ function FloatingCard({
                     {/* Visual card - wrapped in anchor for keyboard accessibility */}
                     <a
                         href={card.id ? `album.html?id=${card.id}` : '#'}
-                        className="rounded-lg overflow-hidden shadow-lg bg-[#1F2121] p-1 select-none cursor-pointer block"
+                        className="rounded-lg overflow-hidden shadow-lg bg-[#1F2121] select-none cursor-pointer flex flex-col"
                         onFocus={() => {
                             // Animate camera to bring this card into view when focused via keyboard
                             if (cameraContext?.focusOnPosition) {
@@ -283,44 +283,55 @@ function FloatingCard({
                         style={{
                             width: cardWidth,
                             height: cardHeight,
-                            transition: 'box-shadow 0.3s ease, border 0.3s ease',
+                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                             boxShadow: hovered
-                                ? "0 12px 24px rgba(49, 184, 198, 0.5), 0 0 30px rgba(49, 184, 198, 0.3)"
-                                : "0 6px 12px rgba(0, 0, 0, 0.6)",
-                            border: hovered ? "2px solid rgba(49, 184, 198, 0.8)" : "1px solid rgba(255, 255, 255, 0.1)",
-                            position: 'relative',
+                                ? "0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22)"
+                                : "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
+                            border: hovered ? "2px solid #31b8c6" : "1px solid rgba(255, 255, 255, 0.1)",
+                            transform: hovered ? 'translateY(-5px)' : 'translateY(0)',
                             textDecoration: 'none',
                         }}
                     >
-                        <img
-                            src={card.cover || "/placeholder.svg"}
-                            alt={card.alt}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
-                            loading="lazy"
-                            draggable={false}
-                        />
-                        {/* Title overlay - visible on hover */}
+                        {/* Image Container */}
+                        <div style={{ flex: '1 1 auto', position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+                            <img
+                                src={card.cover || "/placeholder.svg"}
+                                alt={card.alt}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                }}
+                                loading="lazy"
+                                draggable={false}
+                            />
+                        </div>
+
+                        {/* Title Footer */}
                         <div
                             style={{
-                                position: 'absolute',
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                padding: '20px 12px',
-                                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.7) 60%, transparent)',
-                                borderRadius: '0 0 6px 6px',
-                                opacity: hovered ? 1 : 0,
-                                transition: 'opacity 0.3s ease',
-                                pointerEvents: 'none',
+                                flex: '0 0 auto',
+                                padding: '12px 16px',
+                                background: '#1F2121',
+                                borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minHeight: '50px',
                             }}
                         >
                             <p style={{
-                                color: '#fff',
-                                fontSize: titleFontSize,
-                                fontWeight: '700',
+                                color: '#e2e8f0',
+                                fontSize: isMobile ? '14px' : '16px',
+                                fontWeight: '600',
                                 textAlign: 'center',
                                 margin: 0,
-                                textShadow: '0 2px 6px rgba(0, 0, 0, 0.9)',
+                                lineHeight: '1.2',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
                             }}>
                                 {card.title}
                             </p>
