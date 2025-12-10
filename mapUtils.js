@@ -15,7 +15,7 @@ const WORLD_BOUNDS_LEAFLET = {
 };
 
 // Map Providers Configuration
-const MAP_PROVIDERS = {
+export const MAP_PROVIDERS = {
   // Light Mode Default (Esri NatGeo World Map)
   light: {
     id: 'esri_natgeo',
@@ -70,7 +70,7 @@ const MAP_PROVIDERS = {
  * Get all configured tile layers
  * @returns {Object} Object containing baseMaps and overlayMaps for L.control.layers
  */
-function getLeafletLayers() {
+export function getLeafletLayers() {
   if (typeof L === 'undefined') return null;
 
   const baseMaps = {
@@ -107,7 +107,7 @@ function createTileLayer(providerKey = 'light') {
  * @param {Object} customOptions - Custom options to merge
  * @returns {Object} Merged map options
  */
-function createLeafletMapOptions(customOptions = {}) {
+export function createLeafletMapOptions(customOptions = {}) {
   if (typeof L === 'undefined') {
     console.error('Leaflet library not loaded');
     return customOptions;
@@ -243,7 +243,7 @@ class MapStyleControl {
  * Get user's map preference from localStorage
  * @returns {string} 'globe', 'accessible', or 'enhanced'
  */
-function getMapPreference() {
+export function getMapPreference() {
   // Check explicit user choice
   const saved = localStorage.getItem('mapStyle');
   if (saved === 'globe' || saved === 'accessible' || saved === 'enhanced') {
@@ -273,7 +273,7 @@ function getMapPreference() {
  * Save user's map preference
  * @param {string} preference - 'globe', 'accessible', or 'enhanced'
  */
-function saveMapPreference(preference) {
+export function saveMapPreference(preference) {
   localStorage.setItem('mapStyle', preference);
 }
 
@@ -281,7 +281,7 @@ function saveMapPreference(preference) {
  * Load Leaflet library dynamically
  * @returns {Promise<void>}
  */
-async function loadLeaflet() {
+export async function loadLeaflet() {
   // Check if already loaded
   if (typeof L !== 'undefined') {
     return Promise.resolve();

@@ -1,7 +1,7 @@
 // Configuration for Family Travel Map
 // Update these values with your Google Apps Script deployment URL and master folder ID
 
-const CONFIG = {
+export const CONFIG = {
   // Your Google Apps Script Web App URL
   // Get this from: Google Apps Script > Deploy > Web app URL
   APPS_SCRIPT_URL:

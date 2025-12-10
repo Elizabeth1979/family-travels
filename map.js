@@ -1,3 +1,13 @@
+import { fetchAlbums } from './utils.js';
+import {
+    getMapPreference,
+    saveMapPreference,
+    loadLeaflet,
+    createLeafletMapOptions,
+    getLeafletLayers,
+    MAP_PROVIDERS
+} from './mapUtils.js';
+
 // Main map page JavaScript
 let map;
 let albums = [];
@@ -8,6 +18,26 @@ let mapState = {
     zoom: 2
 };
 
+// Helper to wait for global functions
+const waitForGlobal = async (name, timeout = 5000) => {
+    const start = Date.now();
+    return new Promise((resolve, reject) => {
+        if (window[name]) {
+            resolve(window[name]);
+            return;
+        }
+        const interval = setInterval(() => {
+            if (window[name]) {
+                clearInterval(interval);
+                resolve(window[name]);
+            } else if (Date.now() - start > timeout) {
+                clearInterval(interval);
+                reject(new Error(`Timed out waiting for ${name}`));
+            }
+        }, 50);
+    });
+};
+
 // Initialize the map/gallery based on user preference
 async function initMap() {
     // Get user preference
@@ -16,7 +46,6 @@ async function initMap() {
     if (currentMapType === 'globe' || currentMapType === 'enhanced') {
         currentMapType = 'gallery'; // Old globe users get gallery
     }
-    console.log('Initializing view with type:', currentMapType);
 
     // Update toggle UI to match preference
     updateToggleUI(currentMapType);
@@ -42,6 +71,12 @@ async function initMap() {
         populateAlbumList();
         if (currentMapType === 'accessible') {
             renderMarkers();
+        } else if (currentMapType === 'gallery') {
+            // Render gallery from cache immediately
+            waitForGlobal('mountGallery').then(() => {
+                window.mountGallery('map', albums);
+                hideLoading();
+            }).catch(console.warn);
         }
     }
 
@@ -51,7 +86,8 @@ async function initMap() {
 
 // Initialize 3D Gallery view
 async function initGalleryView() {
-    console.log('Initializing 3D Gallery');
+    showLoading('Loading Gallery...');
+
     // Gallery is mounted via React when albums are loaded
     // Just ensure the container is ready
     const mapContainer = document.getElementById('map');
@@ -127,21 +163,47 @@ function getCachedAlbums() {
 
 async function loadAlbumsAndMarkers() {
     try {
+        // Show loading state if in gallery mode as it might take a moment
+        if (currentMapType === 'gallery') {
+            showLoading('Loading albums...');
+        }
+
         albums = await fetchAlbums();
         populateAlbumList();
 
         // Render appropriate view based on current mode
         if (currentMapType === 'gallery') {
-            if (typeof window.mountGallery === 'function') {
+            try {
+                await waitForGlobal('mountGallery');
                 window.mountGallery('map', albums);
+                hideLoading();
+            } catch (e) {
+                console.error('Gallery failed to mount:', e);
+                // Fallback to map if gallery fails
+                currentMapType = 'accessible';
+                await initLeafletMap();
+                renderMarkers();
+                hideLoading();
             }
         } else {
             renderMarkers();
+            hideLoading();
         }
     } catch (error) {
         console.error('Error loading albums:', error);
         document.getElementById('album-list-items').innerHTML =
             '<li class="error">Failed to load albums. Please try again later.</li>';
+        hideLoading();
+
+        // If we were trying to show gallery and failed, show error on map too/fallback
+        if (currentMapType === 'gallery') {
+            // Maybe switch to map or show explicit error? 
+            // For now, let's try fallback to map so user sees something
+            try {
+                currentMapType = 'accessible';
+                await initLeafletMap();
+            } catch (e) { /* ignore */ }
+        }
     }
 }
 
@@ -547,26 +609,6 @@ function updateToggleUI(mapType) {
 
 // Initialize map type toggle
 function initMapTypeToggle() {
-    // Helper to wait for global functions (React module loads async)
-    const waitForGlobal = async (name, timeout = 5000) => {
-        const start = Date.now();
-        return new Promise((resolve, reject) => {
-            if (window[name]) {
-                resolve(window[name]);
-                return;
-            }
-            const interval = setInterval(() => {
-                if (window[name]) {
-                    clearInterval(interval);
-                    resolve(window[name]);
-                } else if (Date.now() - start > timeout) {
-                    clearInterval(interval);
-                    reject(new Error(`Timed out waiting for ${name}`));
-                }
-            }, 50);
-        });
-    };
-
     // Mount React MapTypeToggle component
     waitForGlobal('mountMapToggle').then(() => {
         window.mountMapToggle('map-type-toggle', currentMapType, (newType) => {
@@ -578,8 +620,15 @@ function initMapTypeToggle() {
 }
 
 // Initialize map when page loads
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize map when page loads
+const init = () => {
     initMap();
     initMenuToggle();
     initMapTypeToggle();
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

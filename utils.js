@@ -1,11 +1,11 @@
-// Shared utility functions for the Family Travel Map
+import { CONFIG } from './config.js';
 
 /**
  * Fetches albums dynamically from Google Apps Script with caching
  * @returns {Promise<Array>} Array of album objects
  * @throws {Error} If fetch fails
  */
-async function fetchAlbums() {
+export async function fetchAlbums() {
   const CACHE_KEY = 'family_travel_albums';
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
