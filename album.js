@@ -489,6 +489,85 @@ function initPhotoSwipe() {
     pinchToClose: true,
   });
 
+  // Add custom download button to toolbar
+  lightbox.on('uiRegister', () => {
+    lightbox.pswp.ui.registerElement({
+      name: 'download-button',
+      order: 8, // Position before zoom button (zoom is typically order 9)
+      isButton: true,
+      tagName: 'a',
+      html: {
+        isCustomSVG: true,
+        inner: '<path d="M20.5 14.3 17.1 18V10h-2.2v7.9l-3.4-3.6L10 15.7l6 6.3 6-6.3-1.5-1.4ZM23 23H9v2h14" id="pswp__icn-download"/>',
+        outlineID: 'pswp__icn-download'
+      },
+      onInit: (el, pswp) => {
+        el.setAttribute('download', '');
+        el.setAttribute('target', '_blank');
+        el.setAttribute('rel', 'noopener');
+        el.setAttribute('title', 'Download');
+
+        pswp.on('change', () => {
+          const currSlideData = pswp.currSlide.data;
+          // Get the original source URL
+          el.href = currSlideData.src || currSlideData.element?.href || '';
+        });
+      },
+      onClick: async (event, el, pswp) => {
+        event.preventDefault();
+        const currSlideData = pswp.currSlide.data;
+        const isVideo = currSlideData.element?.getAttribute('data-pswp-type') === 'video';
+
+        // Get the source URL
+        let sourceUrl = currSlideData.src || currSlideData.element?.href || '';
+
+        // Get the filename from the gallery item
+        const index = pswp.currIndex;
+        const filename = galleryItems[index]?.name || 'download';
+
+        // For videos, open Google Drive download page in new tab (can't fetch cross-origin)
+        if (isVideo) {
+          const fileIdMatch = sourceUrl.match(/[?&]id=([^&]+)/);
+          if (fileIdMatch && fileIdMatch[1]) {
+            window.open(`https://drive.google.com/uc?export=download&id=${fileIdMatch[1]}`, '_blank');
+          }
+          return;
+        }
+
+        // For images, fetch as blob and trigger download
+        // This bypasses Google's redirect to their viewer
+        try {
+          // Show loading state
+          el.style.opacity = '0.5';
+          el.style.pointerEvents = 'none';
+
+          const response = await fetch(sourceUrl);
+          const blob = await response.blob();
+
+          // Create object URL and trigger download
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // Clean up object URL after a short delay
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        } catch (error) {
+          console.error('Download failed:', error);
+          // Fallback: open in new tab
+          window.open(sourceUrl, '_blank');
+        } finally {
+          // Reset loading state
+          el.style.opacity = '';
+          el.style.pointerEvents = '';
+        }
+      }
+    });
+  });
+
   // Handle videos with custom content
   lightbox.on('contentLoad', (e) => {
     const { content, isLazy } = e;
