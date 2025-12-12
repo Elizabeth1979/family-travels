@@ -37,8 +37,10 @@ window.mountGallery = function (containerId, albums) {
     // Check if we need a new root:
     // - If no root exists
     // - If the container element changed (e.g., was replaced in the DOM)
+    // - If the container was cleared (innerHTML = '') by other code (e.g., map.js switchMapType)
     // DO NOT REMOVE - This prevents createRoot() errors on re-mount
-    const needsNewRoot = !galleryRoot || galleryContainer !== container;
+    const containerWasCleared = galleryContainer === container && container.childElementCount === 0;
+    const needsNewRoot = !galleryRoot || galleryContainer !== container || containerWasCleared;
 
     if (needsNewRoot) {
         // If there was an old root, unmount it first

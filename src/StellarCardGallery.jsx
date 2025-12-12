@@ -198,6 +198,7 @@ function FloatingCard({
     const meshRef = useRef(null)
     const groupRef = useRef(null)
     const [hovered, setHovered] = useState(false)
+    const [focused, setFocused] = useState(false) // Separate state for keyboard focus
     const hoverTimeoutRef = useRef(null)
     const { setSelectedCard } = useCard()
     const cameraContext = useCamera()
@@ -224,7 +225,7 @@ function FloatingCard({
     }
 
     // Debounced hover handlers to make hover more persistent
-    // Note: Camera centering only happens on keyboard focus, not hover
+    // Note: Camera centering and z-index boost only happens on keyboard focus, not hover
     const handleMouseEnter = () => {
         // Clear any pending leave timeout
         if (hoverTimeoutRef.current) {
@@ -233,7 +234,7 @@ function FloatingCard({
         }
         setHovered(true)
         document.body.style.cursor = "pointer"
-        // Visual feedback only - no camera movement on hover
+        // Visual feedback only - no camera movement or z-index change on hover
     }
 
     const handleMouseLeave = () => {
@@ -253,13 +254,16 @@ function FloatingCard({
         handleMouseLeave()
     }
 
+    // Combined state for visual styling (either hovered or focused)
+    const isActive = hovered || focused
+
     return (
         <group ref={groupRef} position={[position.x, position.y, position.z]}>
             <Html
                 transform
                 distanceFactor={10}
                 position={[0, 0, 0.01]}
-                zIndexRange={hovered ? [1000, 1001] : [0, 1]}
+                zIndexRange={focused ? [1000, 1001] : [0, 1]}
             >
                 {/* Outer wrapper for stable hover detection - no transform here */}
                 <div
@@ -269,7 +273,7 @@ function FloatingCard({
                         padding: '20px', // Buffer zone for easier hover
                         margin: '-20px', // Offset the padding
                         cursor: 'pointer',
-                        zIndex: hovered ? 1000 : 1,
+                        zIndex: focused ? 1000 : 1,
                         position: 'relative',
                     }}
                 >
@@ -282,9 +286,13 @@ function FloatingCard({
                             if (cameraContext?.focusOnPosition) {
                                 cameraContext.focusOnPosition(position)
                             }
-                            setHovered(true)
+                            setFocused(true)
+                            setHovered(true) // Also trigger hover styling
                         }}
-                        onBlur={() => setHovered(false)}
+                        onBlur={() => {
+                            setFocused(false)
+                            setHovered(false)
+                        }}
                         style={{
                             width: cardWidth,
                             height: cardHeight,
