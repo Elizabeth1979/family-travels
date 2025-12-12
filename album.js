@@ -289,7 +289,8 @@ async function loadImageDimensions() {
 
           video.src = link.href;
         } else {
-          // For images, load and get natural dimensions
+          // For images, use a smaller version to get dimensions (much faster!)
+          // We only need the aspect ratio, not the full resolution
           const img = new Image();
           img.onload = () => {
             link.setAttribute("data-pswp-width", img.naturalWidth);
@@ -302,7 +303,13 @@ async function loadImageDimensions() {
             link.setAttribute("data-pswp-height", "1080");
             resolve();
           };
-          img.src = link.href;
+          // Use 800px version for dimension detection instead of 2000px
+          // This is ~75% smaller and aspect ratio will be identical
+          if (item.id) {
+            img.src = `https://lh3.googleusercontent.com/d/${item.id}=s800`;
+          } else {
+            img.src = link.href;
+          }
         }
       });
     }));
@@ -314,59 +321,36 @@ async function loadImageDimensions() {
   }
 }
 
-// Render gallery grid with staggered animation
+// Render gallery grid with true progressive row-by-row loading
 function renderGallery() {
   const galleryEl = document.getElementById("gallery");
   galleryEl.innerHTML = "";
 
-  // Progressive rendering: render first batch immediately, defer rest
-  const FIRST_BATCH_SIZE = 8;
-  const firstBatch = galleryItems.slice(0, FIRST_BATCH_SIZE);
-  const remainingItems = galleryItems.slice(FIRST_BATCH_SIZE);
+  // Estimate items per row based on typical grid (usually 3-4 on desktop)
+  const ITEMS_PER_ROW = 4;
+  const EAGER_LOAD_COUNT = ITEMS_PER_ROW; // First row loads eagerly (no lazy loading)
 
   let lastType = null;
   let itemCount = 0;
 
-  // Render first batch immediately for fast initial paint
-  firstBatch.forEach((item, index) => {
-    const result = createGalleryItem(item, index, lastType, itemCount);
+  // Create all gallery items and add them to DOM immediately
+  // Each image will reveal itself when it loads (via onload handler)
+  galleryItems.forEach((item, index) => {
+    const result = createGalleryItem(item, index, lastType, itemCount, index < EAGER_LOAD_COUNT);
+
+    if (result.header) {
+      galleryEl.appendChild(result.header);
+    }
     galleryEl.appendChild(result.element);
-    if (result.header) galleryEl.insertBefore(result.header, result.element);
+
     lastType = result.isVideo;
     itemCount = result.itemCount;
   });
-
-  // Trigger reveal animation for first batch
-  requestAnimationFrame(() => {
-    const hiddenItems = galleryEl.querySelectorAll('.gallery-item-hidden');
-    hiddenItems.forEach(item => {
-      item.classList.remove('gallery-item-hidden');
-      item.classList.add('gallery-item-visible');
-    });
-  });
-
-  // Render remaining items after first paint
-  if (remainingItems.length > 0) {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        remainingItems.forEach((item, i) => {
-          const index = FIRST_BATCH_SIZE + i;
-          const result = createGalleryItem(item, index, lastType, itemCount);
-          if (result.header) galleryEl.appendChild(result.header);
-          galleryEl.appendChild(result.element);
-          lastType = result.isVideo;
-          itemCount = result.itemCount;
-          // Reveal immediately since we're adding after initial load
-          result.element.classList.remove('gallery-item-hidden');
-          result.element.classList.add('gallery-item-visible');
-        });
-      }, 100); // Small delay to let first batch render
-    });
-  }
 }
 
 // Create a single gallery item element
-function createGalleryItem(item, index, lastType, itemCount) {
+// eagerLoad: if true, don't use lazy loading (for first row)
+function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) {
   const isVideo = item.mime && item.mime.startsWith("video/");
   let header = null;
 
@@ -391,13 +375,31 @@ function createGalleryItem(item, index, lastType, itemCount) {
   galleryItem.className = "gallery-item gallery-item-hidden";
   galleryItem.setAttribute("data-index", index);
   galleryItem.setAttribute("role", "listitem");
-  galleryItem.style.animationDelay = `${itemCount * 50}ms`;
+  // Stagger animation delay based on position - creates waterfall effect
+  galleryItem.style.animationDelay = `${(itemCount % 4) * 50}ms`;
   itemCount++;
+
+  // Helper to reveal item when its media loads
+  // Add minimum delay based on row position for visible progressive effect
+  const revealItem = () => {
+    // Calculate row number (assuming ~4 items per row)
+    const rowNumber = Math.floor(index / 4);
+    const minDelay = rowNumber * 100; // 100ms between rows minimum
+
+    setTimeout(() => {
+      galleryItem.classList.remove('gallery-item-hidden');
+      galleryItem.classList.add('gallery-item-visible');
+    }, minDelay);
+  };
 
   if (isVideo) {
     const videoThumbnail = document.createElement("img");
     videoThumbnail.className = "gallery-media loading";
-    videoThumbnail.setAttribute("loading", "lazy");
+
+    // Use eager loading for first row, lazy for rest
+    if (!eagerLoad) {
+      videoThumbnail.setAttribute("loading", "lazy");
+    }
 
     let thumbnailUrl = null;
     const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
@@ -412,6 +414,7 @@ function createGalleryItem(item, index, lastType, itemCount) {
       videoThumbnail.onload = () => {
         videoThumbnail.classList.remove('loading');
         galleryItem.classList.add('gallery-item-loaded');
+        revealItem();
       };
 
       videoThumbnail.onerror = () => {
@@ -420,12 +423,15 @@ function createGalleryItem(item, index, lastType, itemCount) {
         placeholder.className = "gallery-media video-placeholder";
         galleryItem.insertBefore(placeholder, galleryItem.firstChild);
         galleryItem.classList.add('gallery-item-loaded');
+        revealItem();
       };
     } else {
       videoThumbnail.style.display = 'none';
       const placeholder = document.createElement("div");
       placeholder.className = "gallery-media video-placeholder";
       galleryItem.appendChild(placeholder);
+      // No image to load, reveal immediately
+      requestAnimationFrame(revealItem);
     }
 
     const videoLabel = document.createElement("div");
@@ -452,11 +458,16 @@ function createGalleryItem(item, index, lastType, itemCount) {
 
     img.alt = item.description || "";
     img.className = "gallery-media loading";
-    img.setAttribute("loading", "lazy");
+
+    // Use eager loading for first row, lazy for rest
+    if (!eagerLoad) {
+      img.setAttribute("loading", "lazy");
+    }
 
     img.onload = () => {
       img.classList.remove('loading');
       galleryItem.classList.add('gallery-item-loaded');
+      revealItem();
     };
 
     img.onerror = () => {
@@ -465,6 +476,8 @@ function createGalleryItem(item, index, lastType, itemCount) {
       galleryItem.classList.add('gallery-item-loaded');
       if (img.src.includes('drive.google.com/thumbnail') && item.src && item.src !== img.src) {
         img.src = item.src;
+      } else {
+        revealItem(); // Reveal even on error so item doesn't stay hidden
       }
     };
 
