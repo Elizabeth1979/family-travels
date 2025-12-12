@@ -224,6 +224,7 @@ function FloatingCard({
     }
 
     // Debounced hover handlers to make hover more persistent
+    // Note: Camera centering only happens on keyboard focus, not hover
     const handleMouseEnter = () => {
         // Clear any pending leave timeout
         if (hoverTimeoutRef.current) {
@@ -232,6 +233,7 @@ function FloatingCard({
         }
         setHovered(true)
         document.body.style.cursor = "pointer"
+        // Visual feedback only - no camera movement on hover
     }
 
     const handleMouseLeave = () => {
@@ -257,6 +259,7 @@ function FloatingCard({
                 transform
                 distanceFactor={10}
                 position={[0, 0, 0.01]}
+                zIndexRange={hovered ? [1000, 1001] : [0, 1]}
             >
                 {/* Outer wrapper for stable hover detection - no transform here */}
                 <div
@@ -266,6 +269,8 @@ function FloatingCard({
                         padding: '20px', // Buffer zone for easier hover
                         margin: '-20px', // Offset the padding
                         cursor: 'pointer',
+                        zIndex: hovered ? 1000 : 1,
+                        position: 'relative',
                     }}
                 >
                     {/* Visual card - wrapped in anchor for keyboard accessibility */}
@@ -288,7 +293,7 @@ function FloatingCard({
                                 ? "0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22)"
                                 : "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
                             border: hovered ? "2px solid #31b8c6" : "1px solid rgba(255, 255, 255, 0.1)",
-                            transform: hovered ? 'translateY(-5px)' : 'translateY(0)',
+                            transform: hovered ? 'translateY(-5px) scale(1.35)' : 'translateY(0) scale(1)',
                             textDecoration: 'none',
                         }}
                     >
@@ -308,23 +313,33 @@ function FloatingCard({
                             />
                         </div>
 
-                        {/* Title Footer */}
+                        {/* Title Footer - visible on hover/focus only */}
                         <div
                             style={{
                                 flex: '0 0 auto',
                                 padding: '12px 16px',
-                                background: '#1F2121',
-                                borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                background: 'linear-gradient(to top, rgba(31, 33, 33, 0.95), rgba(31, 33, 33, 0.8))',
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 minHeight: '50px',
+                                opacity: hovered ? 1 : 0,
+                                transform: hovered ? 'translateY(0)' : 'translateY(10px)',
+                                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                                pointerEvents: hovered ? 'auto' : 'none',
                             }}
                         >
                             <p style={{
+                                fontFamily: "'Bebas Neue', sans-serif",
                                 color: '#e2e8f0',
-                                fontSize: isMobile ? '14px' : '16px',
-                                fontWeight: '600',
+                                fontSize: isMobile ? '16px' : '20px',
+                                fontWeight: '400',
+                                letterSpacing: '1px',
+                                textTransform: 'uppercase',
                                 textAlign: 'center',
                                 margin: 0,
                                 lineHeight: '1.2',
