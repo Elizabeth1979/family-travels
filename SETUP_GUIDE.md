@@ -53,10 +53,10 @@ Previously, you had to manually edit `albums.json` every time you added a new al
    };
    ```
 
-### Step 5: Deploy to Netlify
+### Step 5: Deploy to Vercel
 
 1. Commit and push your changes to GitHub
-2. Netlify will automatically redeploy your site
+2. Vercel will automatically redeploy your site
 3. Done!
 
 ## Adding New Albums (Super Easy!)

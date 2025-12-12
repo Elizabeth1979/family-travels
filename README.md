@@ -10,7 +10,7 @@ An interactive map-based website where each location pin opens an album of photo
 - Full-screen viewer with swipe navigation
 - Accessible design with keyboard support
 - Mobile responsive
-- Zero backend - hosted on Netlify
+- Zero backend - hosted on Vercel
 
 ## Setup Instructions
 
@@ -56,18 +56,11 @@ const CONFIG = {
 
 **Note:** If you prefer to use static `albums.json` instead, set `USE_DYNAMIC_ALBUMS: false`
 
-### 3. Deploy to Netlify
+### 3. Deploy to Vercel
 
-#### Option A: Drag & Drop
-1. Go to [Netlify](https://app.netlify.com/)
-2. Drag the entire project folder to the deploy area
-3. Your site is live!
-
-#### Option B: Git Integration
-1. Create a Git repository
-2. Push your code to GitHub
-3. Connect your repo to Netlify
-4. Netlify will auto-deploy on every push
+1. Go to [Vercel](https://vercel.com/)
+2. Import your Git repository
+3. Vercel will auto-deploy on every push
 
 ## Project Structure
 
@@ -81,7 +74,7 @@ travels/
 ├── album.js                # Album page logic
 ├── albums.json             # Album data (legacy/fallback)
 ├── google-apps-script.js   # Drive API script (deploy separately)
-├── netlify.toml            # Netlify configuration
+
 └── README.md               # This file
 ```
 
@@ -132,7 +125,7 @@ If you set `USE_DYNAMIC_ALBUMS: false` in config.js:
 2. Set folder to "Anyone with the link can view"
 3. Get the folder ID from the URL
 4. Add a new entry to `albums.json`
-5. Commit and push (or re-deploy to Netlify)
+5. Commit and push (or re-deploy to Vercel)
 
 ## Technology Stack
 
@@ -140,7 +133,7 @@ If you set `USE_DYNAMIC_ALBUMS: false` in config.js:
 - **Map Library**: Leaflet
 - **Gallery Library**: PhotoSwipe
 - **Data Source**: Google Drive + Apps Script
-- **Hosting**: Netlify
+- **Hosting**: Vercel
 
 ## Accessibility Features
 

@@ -3,7 +3,7 @@
 ### 🎯 Goal
 
 Create an interactive **map-based website** where each location pin opens an album of photos and videos from that trip.\
-No backend servers. Hosted on **Netlify**, using **Google Drive folders** + a **Google Apps Script** to load the album contents.
+No backend servers. Hosted on **Vercel**, using **Google Drive folders** + a **Google Apps Script** to load the album contents.
 
 ---
 
@@ -69,7 +69,7 @@ No backend servers. Hosted on **Netlify**, using **Google Drive folders** + a **
 
 5. **Hosting**
 
-   - Static site deployed on **Netlify**.
+   - Static site deployed on **Vercel**.
    - Fetches data from `albums.json` and the published Google Apps Script URL.
 
 6. **Privacy**
@@ -104,6 +104,6 @@ No backend servers. Hosted on **Netlify**, using **Google Drive folders** + a **
 - **Map Library:** Leaflet (accessible, open-source)
 - **Gallery Library:** PhotoSwipe (lightbox for photos/videos)
 - **Data Source:** Google Drive folders (JSON via Google Apps Script)
-- **Hosting:** Netlify (static deploy)
+- **Hosting:** Vercel (static deploy)
 - **Accessibility:** Keyboard support, focus indicators, alt-text toggle, map labeled as region
 

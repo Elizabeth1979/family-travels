@@ -29,7 +29,7 @@ The current implementation delivers core functionality but blocks rendering duri
 ## Deployment & Loading Strategy
 - **Progressive hydration**: Serve a prerendered HTML shell with the map container, navigation, and essential styles. Load `map.js` with `defer` so parsing doesn't block first paint, and gate heavier logic behind `requestIdleCallback`. 【F:index.html†L21-L46】
 - **Measure with Core Web Vitals**: Add web-vitals logging or Lighthouse CI to quantify improvements. Slow Drive responses will inflate `Largest Contentful Paint`; caching and skeletons will shrink `First Input Delay`.
-- **Consider static build step**: For known albums, pre-generate `albums.json` at build time and deploy via CDN (Netlify already in repo). Dynamic fetching can be reserved for new or updated folders only.
+- **Consider static build step**: For known albums, pre-generate `albums.json` at build time and deploy via CDN (Vercel already in repo). Dynamic fetching can be reserved for new or updated folders only.
 
 ## Quick Wins Checklist
 1. Initialize Leaflet immediately, then fetch markers asynchronously, showing skeletons in the sidebar.

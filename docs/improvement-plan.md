@@ -6,7 +6,7 @@ This step ensures every developer can run the site locally and has core linting/
 - [x] Document a lightweight local setup guide for running the static site with a simple HTTP server (e.g., `npm serve` or `python -m http.server`).
 - [x] Add a `package.json` (or update existing docs) with convenient scripts: `start` for local preview, `lint:css` and `lint:js` once the tooling is in place.
 - [x] Introduce a basic automated formatting/linting toolchain (Stylelint for CSS, ESLint + Prettier for JS) configured to respect the existing style choices while flagging cascade/duplication issues.
-- [x] Wire the lint commands into CI (Netlify build hook or GitHub Actions) after verifying they pass locally.
+- [x] Wire the lint commands into CI (Vercel build hook or GitHub Actions) after verifying they pass locally.
 
 ## 2. CSS Architecture & Cleanup (Preserve Visual Identity)
 
@@ -58,7 +58,7 @@ Here we optimize loading behavior so assets arrive quickly, animations remain sm
 - [ ] Lazy-load Leaflet/PhotoSwipe assets conditionally (e.g., defer PhotoSwipe on map page, load map JS only on relevant pages).
 - [ ] Implement responsive image handling for album thumbnails (consider caching Google Drive thumbnail URLs, add `srcset` where possible).
 - [ ] Add skeleton/loading shimmer using CSS gradients for gallery items to keep perceived performance high without new design language.
-- [ ] Introduce basic service worker or caching headers (via Netlify config) for static assets once verified.
+- [ ] Introduce basic service worker or caching headers (via Vercel config) for static assets once verified.
 
 ## 7. Content & Data Management
 
@@ -77,8 +77,8 @@ This step adds manual and automated checks that confirm the map, galleries, and 
 ## 9. Deployment & Monitoring
 
 Here we update deployment workflows to run the new checks automatically and add lightweight monitoring to understand site usage after releases.
-- [ ] Review `netlify.toml` to ensure build commands align with new tooling (lint/tests before deploy).
-- [ ] Configure Netlify previews to run the lint/test suite.
+- [ ] Review `vercel.json` to ensure build commands align with new tooling (lint/tests before deploy).
+- [ ] Configure Vercel previews to run the lint/test suite.
 - [ ] Add simple logging/analytics (privacy-respecting) to gauge feature usage (e.g., how often the sidebar is opened) to guide future improvements.
 
 ## 10. Documentation & Maintenance

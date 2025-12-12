@@ -1,6 +1,6 @@
 # Local Development Guide
 
-Run the static site locally to verify changes before deploying to Netlify.
+Run the static site locally to verify changes before deploying to Vercel.
 
 ## Prerequisites
 - Node.js 18 or newer (installs tooling and runs the local server)
@@ -25,7 +25,7 @@ If you only need a quick preview and don't want to install npm packages yet, use
 ```bash
 python -m http.server 4173
 ```
-> Note: This approach skips the linting toolchain and does not set the headers Netlify adds in production. Use `npm start` for the full development experience.
+> Note: This approach skips the linting toolchain and does not set the headers Vercel adds in production. Use `npm start` for the full development experience.
 
 ## Linting & Formatting
 - `npm run lint` runs both JavaScript (`eslint`) and CSS (`stylelint`) checks.
