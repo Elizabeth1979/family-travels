@@ -375,6 +375,10 @@ function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) 
   galleryItem.className = "gallery-item gallery-item-hidden";
   galleryItem.setAttribute("data-index", index);
   galleryItem.setAttribute("role", "listitem");
+  // Store description for PhotoSwipe caption
+  if (item.description) {
+    galleryItem.setAttribute("data-caption", item.description);
+  }
   // Stagger animation delay based on position - creates waterfall effect
   galleryItem.style.animationDelay = `${(itemCount % 4) * 50}ms`;
   itemCount++;
@@ -482,9 +486,56 @@ function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) 
     };
 
     galleryItem.appendChild(img);
+
+    // Add ALT button if image has a description
+    if (item.description) {
+      const altButton = createAltButton(item.description);
+      galleryItem.appendChild(altButton);
+    }
   }
 
   return { element: galleryItem, header, isVideo, itemCount };
+}
+
+// Create ALT button element with tooltip functionality
+function createAltButton(description) {
+  const altButton = document.createElement("button");
+  altButton.className = "gallery-alt-button";
+  altButton.textContent = "ALT";
+  altButton.setAttribute("aria-label", "View image description");
+  altButton.setAttribute("type", "button");
+
+  // Create tooltip element
+  const tooltip = document.createElement("div");
+  tooltip.className = "gallery-alt-tooltip";
+  tooltip.textContent = description;
+
+  altButton.appendChild(tooltip);
+
+  // Handle click - show/hide tooltip and prevent PhotoSwipe from opening
+  altButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Close any other open tooltips
+    document.querySelectorAll('.gallery-alt-tooltip.visible').forEach(t => {
+      if (t !== tooltip) {
+        t.classList.remove('visible');
+      }
+    });
+
+    // Toggle this tooltip
+    tooltip.classList.toggle('visible');
+  });
+
+  // Close tooltip when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!altButton.contains(e.target)) {
+      tooltip.classList.remove('visible');
+    }
+  });
+
+  return altButton;
 }
 
 // Initialize PhotoSwipe lightbox
@@ -636,7 +687,66 @@ function initPhotoSwipe() {
     }
   });
 
-  // ALT button and caption overlay removed - to be re-added when proper alt text strategy is implemented
+  // Add caption support for displaying alt text descriptions
+  lightbox.on('uiRegister', function () {
+    lightbox.pswp.ui.registerElement({
+      name: 'caption',
+      order: 9,
+      isButton: false,
+      appendTo: 'root',
+      html: '',
+      onInit: (el, pswp) => {
+        el.className = 'pswp__caption';
+
+        const captionContent = document.createElement('div');
+        captionContent.className = 'pswp__caption-content';
+        el.appendChild(captionContent);
+
+        // Function to position caption below the image
+        const positionCaption = () => {
+          const slide = pswp.currSlide;
+          if (!slide || !slide.width || !slide.height) return;
+
+          // Get the container dimensions
+          const containerHeight = pswp.viewportSize.y;
+
+          // Calculate the black bar height below the image
+          // PhotoSwipe centers images vertically
+          const zoomLevel = slide.currZoomLevel || 1;
+          const imageDisplayHeight = slide.height * zoomLevel;
+          const blackBarHeight = (containerHeight - imageDisplayHeight) / 2;
+
+          // Position caption in the middle of the black bar below the image
+          // If black bar is small, keep caption at minimum 12px from bottom
+          const captionOffset = Math.max(12, (blackBarHeight / 2) - 20);
+          el.style.bottom = captionOffset + 'px';
+        };
+
+        // Update caption content and position when slide changes
+        const updateCaption = () => {
+          const currSlideData = pswp.currSlide.data;
+          const caption = currSlideData.element?.getAttribute('data-caption') || '';
+
+          if (caption) {
+            captionContent.textContent = caption;
+            el.classList.remove('pswp__caption--hidden');
+            // Position after a tiny delay to ensure slide dimensions are ready
+            requestAnimationFrame(positionCaption);
+          } else {
+            captionContent.textContent = '';
+            el.classList.add('pswp__caption--hidden');
+          }
+        };
+
+        pswp.on('change', updateCaption);
+        pswp.on('zoomPanUpdate', positionCaption);
+        pswp.on('resize', positionCaption);
+
+        // Initial caption for first slide
+        setTimeout(updateCaption, 50);
+      }
+    });
+  });
 
   // Pause previous video when changing slides
   lightbox.on('change', () => {
