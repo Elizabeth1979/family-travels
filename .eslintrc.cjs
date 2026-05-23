@@ -6,7 +6,7 @@ module.exports = {
   },
   parserOptions: {
     ecmaVersion: "latest",
-    sourceType: "script"
+    sourceType: "module"
   },
   extends: [
     "eslint:recommended",
@@ -33,5 +33,13 @@ module.exports = {
         ignoreRestSiblings: true
       }
     ]
-  }
+  },
+  overrides: [
+    {
+      files: ["*.config.js", "vite.config.js", "postcss.config.js", "tailwind.config.js"],
+      env: {
+        node: true
+      }
+    }
+  ]
 };

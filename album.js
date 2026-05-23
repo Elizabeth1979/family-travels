@@ -583,7 +583,7 @@ function initPhotoSwipe() {
         const isVideo = currSlideData.element?.getAttribute('data-pswp-type') === 'video';
 
         // Get the source URL
-        let sourceUrl = currSlideData.src || currSlideData.element?.href || '';
+        const sourceUrl = currSlideData.src || currSlideData.element?.href || '';
 
         // Get the filename from the gallery item
         const index = pswp.currIndex;

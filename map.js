@@ -13,7 +13,7 @@ let map;
 let albums = [];
 let markers = [];
 let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
-let mapState = {
+const mapState = {
     center: { lat: 20, lng: 0 },
     zoom: 2
 };

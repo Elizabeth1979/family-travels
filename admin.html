@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Album Admin - Family Travel Map</title>
+    <meta name="referrer" content="no-referrer">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body class="admin-page">
+    <header>
+        <div class="header-content">
+            <nav>
+                <a href="index.html" class="back-link" aria-label="Back to map">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+            </nav>
+            <div class="header-text">
+                <h1>Album Admin</h1>
+            </div>
+            <div class="header-controls">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+                    <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" style="display: none;">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="admin-container">
+        <section class="admin-settings" aria-label="Admin settings">
+            <div class="admin-field admin-token-field">
+                <label for="admin-token">Admin token</label>
+                <input type="password" id="admin-token" autocomplete="off"
+                    placeholder="Paste the secret you set in the Apps Script" />
+                <p class="admin-hint">Stored only in this browser. Required for any change.</p>
+            </div>
+            <div class="admin-settings-actions">
+                <button type="button" id="refresh-btn" class="admin-btn">Refresh list</button>
+                <button type="button" id="make-all-public-btn" class="admin-btn">Make all albums public</button>
+            </div>
+            <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <div class="admin-grid">
+            <aside class="admin-list-panel" aria-label="Album list">
+                <div class="admin-list-header">
+                    <h2>Albums</h2>
+                    <button type="button" id="new-album-btn" class="admin-btn admin-btn-primary">+ New album</button>
+                </div>
+                <ul id="admin-album-list" class="admin-album-list"></ul>
+            </aside>
+
+            <section class="admin-editor" id="admin-editor" aria-label="Album editor" hidden>
+                <h2 id="editor-heading">Edit album</h2>
+
+                <div class="admin-field">
+                    <label for="edit-title">Title</label>
+                    <input type="text" id="edit-title" placeholder="e.g. Eilat Trip" />
+                </div>
+
+                <div class="admin-field">
+                    <label for="edit-date">Date</label>
+                    <input type="text" id="edit-date" placeholder="e.g. October 2025" />
+                </div>
+
+                <div class="admin-field">
+                    <label for="edit-description">Description</label>
+                    <textarea id="edit-description" rows="3" placeholder="A short note about this trip"></textarea>
+                </div>
+
+                <div class="admin-field">
+                    <label>Location <span class="admin-hint">— click the map to drop the pin</span></label>
+                    <div id="admin-pin-map" class="admin-pin-map"></div>
+                    <div class="admin-coords">
+                        <label for="edit-lat">Lat</label>
+                        <input type="number" id="edit-lat" step="any" />
+                        <label for="edit-lng">Lng</label>
+                        <input type="number" id="edit-lng" step="any" />
+                    </div>
+                </div>
+
+                <div class="admin-field" id="cover-field">
+                    <label>Cover photo <span class="admin-hint">— click a photo to use it as the cover</span></label>
+                    <div id="admin-cover-grid" class="admin-cover-grid"></div>
+                </div>
+
+                <div class="admin-field admin-sharing-row" id="sharing-row">
+                    <span id="sharing-status" class="admin-hint">Sharing: set with the button</span>
+                    <button type="button" id="make-public-btn" class="admin-btn">Make this album public</button>
+                </div>
+
+                <div class="admin-editor-actions">
+                    <button type="button" id="save-btn" class="admin-btn admin-btn-primary">Save</button>
+                    <button type="button" id="cancel-btn" class="admin-btn">Close</button>
+                </div>
+
+                <div id="new-album-help" class="admin-help" hidden>
+                    <p><strong>Album created.</strong> Now add photos: open the folder in Google Drive and drag your
+                        photos in, then come back and refresh. The album and its photos are already shared publicly.</p>
+                    <a id="open-drive-link" href="#" target="_blank" rel="noopener noreferrer" class="admin-btn">Open
+                        folder in Drive</a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="config.js"></script>
+    <script type="module" src="utils.js"></script>
+    <script type="module" src="mapUtils.js"></script>
+    <script type="module" src="admin.js"></script>
+    <script>
+        // Theme toggle (mirrors the other pages)
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = themeToggleBtn.querySelector('.sun-icon');
+        const moonIcon = themeToggleBtn.querySelector('.moon-icon');
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+        themeToggleBtn.addEventListener('click', function () {
+            const theme = document.documentElement.getAttribute('data-theme');
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+
+</html>

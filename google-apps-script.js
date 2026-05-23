@@ -9,6 +9,19 @@ const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 // Set to true to enable AI-generated alt text for images without descriptions
 const ENABLE_AI_ALT_TEXT = false;  // Disabled - enable after testing
 
+// Shared secret that gates all write actions (doPost). Set this to a long
+// random string and enter the SAME value in the admin page. Keep it private:
+// anyone with this token + the master folder ID can edit your albums.
+const ADMIN_TOKEN = "CHANGE_ME_SET_A_LONG_RANDOM_SECRET";
+
+// Master folder used when creating brand-new albums from the admin page.
+const ADMIN_MASTER_FOLDER_ID = "1WMN1Y0Xa8tulV5zvP5tDawXz2uXCDxRL";
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 // ============================================
 // MAIN FUNCTION
 // ============================================
@@ -131,8 +144,10 @@ function listAlbums(masterId) {
       let lng = 35.2137;
       let date = '';
       let albumDesc = '';
+      let coverId = '';
 
       if (description) {
+        // Format: "lat,lng | date | description | coverFileId" (last field optional)
         const parts = description.split('|').map(p => p.trim());
 
         // Parse coordinates from first part
@@ -153,6 +168,11 @@ function listAlbums(masterId) {
         if (parts[2]) {
           albumDesc = parts[2];
         }
+
+        // Parse explicit cover image file ID from fourth part
+        if (parts[3]) {
+          coverId = parts[3];
+        }
       }
 
       // Extract date from folder name if not in description
@@ -167,15 +187,19 @@ function listAlbums(masterId) {
       // Generate album ID from folder name
       const albumId = folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-      // Get cover image (first image in folder) - optimized
+      // Get cover image: use explicit cover ID if set, else first image in folder
       let coverUrl = null;
       try {
-        // Use searchFiles for faster filtering - only get first image file
-        const imageQuery = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
-        const imageFiles = DriveApp.searchFiles(imageQuery);
-        if (imageFiles.hasNext()) {
-          const firstImage = imageFiles.next();
-          coverUrl = `https://lh3.googleusercontent.com/d/${firstImage.getId()}=s2000`;
+        if (coverId) {
+          coverUrl = `https://lh3.googleusercontent.com/d/${coverId}=s2000`;
+        } else {
+          // Use searchFiles for faster filtering - only get first image file
+          const imageQuery = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
+          const imageFiles = DriveApp.searchFiles(imageQuery);
+          if (imageFiles.hasNext()) {
+            const firstImage = imageFiles.next();
+            coverUrl = `https://lh3.googleusercontent.com/d/${firstImage.getId()}=s2000`;
+          }
         }
       } catch (e) {
         Logger.log('Error getting cover image: ' + e);
@@ -276,4 +300,152 @@ function generateAIDescription(fileId) {
     Logger.log('Error generating AI description: ' + error.toString());
     return '';
   }
+}
+
+// ============================================
+// WRITE API (admin panel) — every action is gated by ADMIN_TOKEN
+// ============================================
+//
+// The admin page POSTs with Content-Type text/plain (a "simple" request that
+// avoids a CORS preflight Apps Script cannot answer) and a JSON string body:
+//   { "token": "...", "action": "setMeta", ... }
+// Deploy the web app as "Execute as: Me" and "Who has access: Anyone".
+
+function doPost(e) {
+  try {
+    let body = {};
+    if (e && e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    }
+
+    if (!ADMIN_TOKEN || ADMIN_TOKEN === 'CHANGE_ME_SET_A_LONG_RANDOM_SECRET') {
+      return jsonResponse({ ok: false, error: 'Admin token is not configured in the script.' });
+    }
+    if (body.token !== ADMIN_TOKEN) {
+      return jsonResponse({ ok: false, error: 'Unauthorized' });
+    }
+
+    switch (body.action) {
+      case 'setMeta': return adminSetMeta(body);
+      case 'rename': return adminRename(body);
+      case 'setSharing': return adminSetSharing(body);
+      case 'createAlbum': return adminCreateAlbum(body);
+      case 'makeAllPublic': return adminMakeAllPublic(body);
+      case 'uploadFile': return adminUploadFile(body);
+      default: return jsonResponse({ ok: false, error: 'Unknown action: ' + body.action });
+    }
+  } catch (error) {
+    return jsonResponse({ ok: false, error: error.toString() });
+  }
+}
+
+// Build the folder-description metadata string from individual fields:
+// "lat,lng | date | description | coverFileId" (coords/cover optional).
+function buildMetaDescription(lat, lng, date, description, coverId) {
+  const hasCoords = lat !== '' && lat != null && lng !== '' && lng != null;
+  const coords = hasCoords ? `${lat},${lng}` : '';
+  const parts = [coords, date || '', description || ''];
+  if (coverId) parts.push(coverId);
+  return parts.join(' | ');
+}
+
+function adminSetMeta(body) {
+  const folder = DriveApp.getFolderById(body.folderId);
+  folder.setDescription(
+    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId)
+  );
+  return jsonResponse({ ok: true, folderId: body.folderId });
+}
+
+function adminRename(body) {
+  const folder = DriveApp.getFolderById(body.folderId);
+  const title = (body.title || '').trim();
+  if (!title) return jsonResponse({ ok: false, error: 'Title is required' });
+  folder.setName(title);
+  return jsonResponse({ ok: true, folderId: body.folderId, title: title });
+}
+
+// Make the folder AND the media files inside it public (or private). File-level
+// sharing is required so the lh3.googleusercontent.com thumbnail links work.
+function adminSetSharing(body) {
+  const folder = DriveApp.getFolderById(body.folderId);
+  const makePublic = body.public !== false; // default: make public
+  const access = makePublic ? DriveApp.Access.ANYONE_WITH_LINK : DriveApp.Access.PRIVATE;
+  const permission = makePublic ? DriveApp.Permission.VIEW : DriveApp.Permission.NONE;
+
+  folder.setSharing(access, permission);
+
+  let filesUpdated = 0;
+  const files = folder.getFiles();
+  while (files.hasNext()) {
+    try {
+      files.next().setSharing(access, permission);
+      filesUpdated++;
+    } catch (err) {
+      Logger.log('Sharing change failed for a file: ' + err);
+    }
+  }
+  return jsonResponse({ ok: true, folderId: body.folderId, public: makePublic, filesUpdated: filesUpdated });
+}
+
+function adminCreateAlbum(body) {
+  const master = DriveApp.getFolderById(body.masterId || ADMIN_MASTER_FOLDER_ID);
+  const title = (body.title || '').trim();
+  if (!title) return jsonResponse({ ok: false, error: 'Title is required' });
+
+  const folder = master.createFolder(title);
+  folder.setDescription(
+    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId)
+  );
+  folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return jsonResponse({
+    ok: true,
+    folderId: folder.getId(),
+    title: title,
+    id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  });
+}
+
+function adminMakeAllPublic(body) {
+  const master = DriveApp.getFolderById(body.masterId || ADMIN_MASTER_FOLDER_ID);
+  const subfolders = master.getFolders();
+  let foldersUpdated = 0;
+  while (subfolders.hasNext()) {
+    try {
+      const folder = subfolders.next();
+      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      foldersUpdated++;
+      const files = folder.getFiles();
+      while (files.hasNext()) {
+        try {
+          files.next().setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (err) {
+          Logger.log('File sharing failed: ' + err);
+        }
+      }
+    } catch (err) {
+      Logger.log('Folder sharing failed: ' + err);
+    }
+  }
+  return jsonResponse({ ok: true, foldersUpdated: foldersUpdated });
+}
+
+// Upload one small base64-encoded file into an album folder, then make it
+// public. Apps Script payload/runtime limits make this fine for a few photos
+// at a time; large batches should still be added via Drive directly.
+function adminUploadFile(body) {
+  if (!body.dataBase64 || !body.filename) {
+    return jsonResponse({ ok: false, error: 'filename and dataBase64 are required' });
+  }
+  const folder = DriveApp.getFolderById(body.folderId);
+  const bytes = Utilities.base64Decode(body.dataBase64);
+  const blob = Utilities.newBlob(bytes, body.mimeType || 'application/octet-stream', body.filename);
+  const file = folder.createFile(blob);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (err) {
+    Logger.log('Could not set file sharing: ' + err);
+  }
+  return jsonResponse({ ok: true, fileId: file.getId(), name: file.getName() });
 }

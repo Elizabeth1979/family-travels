@@ -22,7 +22,8 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 main: path.resolve(__dirname, 'index.html'),
-                album: path.resolve(__dirname, 'album.html')
+                album: path.resolve(__dirname, 'album.html'),
+                admin: path.resolve(__dirname, 'admin.html')
             },
             output: {
                 manualChunks: {
