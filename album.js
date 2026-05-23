@@ -841,10 +841,17 @@ function showError(message) {
 function handleShare() {
   if (!currentAlbum) return;
 
-  // Create shared URL
-  const url = new URL(window.location.href);
-  url.searchParams.set('shared', 'true');
-  const sharedUrl = url.toString();
+  // Prefer the clean /trip/<id> URL: it shows a cover-photo preview when
+  // shared (handled by the Vercel function) and redirects to the album.
+  // Fall back to the current page URL when opened outside that setup.
+  let sharedUrl;
+  if (currentAlbum.id) {
+    sharedUrl = `${window.location.origin}/trip/${encodeURIComponent(currentAlbum.id)}`;
+  } else {
+    const url = new URL(window.location.href);
+    url.searchParams.set('shared', 'true');
+    sharedUrl = url.toString();
+  }
 
   // Copy to clipboard
   navigator.clipboard.writeText(sharedUrl).then(() => {

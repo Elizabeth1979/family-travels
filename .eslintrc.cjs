@@ -40,6 +40,15 @@ module.exports = {
       env: {
         node: true
       }
+    },
+    {
+      files: ["api/**/*.js"],
+      env: {
+        node: true
+      },
+      globals: {
+        fetch: "readonly"
+      }
     }
   ]
 };

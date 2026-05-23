@@ -1,4 +1,7 @@
 {
+  "rewrites": [
+    { "source": "/trip/:id", "destination": "/api/trip/:id" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
