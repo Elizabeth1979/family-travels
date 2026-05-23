@@ -141,6 +141,7 @@ function selectAlbum(album) {
   mode = 'edit';
   current = album;
   selectedCoverId = '';
+  clearPlaceSearch();
 
   document.getElementById('editor-heading').textContent = 'Edit album';
   document.getElementById('edit-title').value = album.title || '';
@@ -169,6 +170,7 @@ function startNewAlbum() {
   mode = 'new';
   current = null;
   selectedCoverId = '';
+  clearPlaceSearch();
 
   document.getElementById('editor-heading').textContent = 'New album';
   document.getElementById('edit-title').value = '';
@@ -232,6 +234,87 @@ function syncMarkerFromInputs() {
   if (!isNaN(lat) && !isNaN(lng) && pinMap && pinMarker) {
     pinMarker.setLatLng([lat, lng]);
     pinMap.panTo([lat, lng]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Place search (OpenStreetMap Nominatim) — type a place, drop the pin for you
+// ---------------------------------------------------------------------------
+
+function setPinLocation(lat, lng, zoom) {
+  updateCoordInputs(lat, lng);
+  if (pinMap && pinMarker) {
+    pinMarker.setLatLng([lat, lng]);
+    pinMap.setView([lat, lng], zoom || pinMap.getZoom());
+  }
+}
+
+async function geocodePlace(query) {
+  const url =
+    'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=' +
+    encodeURIComponent(query);
+  // Send only the origin (the page default is no-referrer) so Nominatim can
+  // identify the app per their usage policy without leaking the full URL.
+  const response = await fetch(url, { referrerPolicy: 'origin' });
+  if (!response.ok) throw new Error(`Search failed (${response.status})`);
+  return response.json();
+}
+
+function hidePlaceResults() {
+  const results = document.getElementById('place-results');
+  results.hidden = true;
+  results.innerHTML = '';
+}
+
+function clearPlaceSearch() {
+  document.getElementById('place-search').value = '';
+  hidePlaceResults();
+}
+
+function showPlaceMessage(message) {
+  const results = document.getElementById('place-results');
+  results.hidden = false;
+  results.innerHTML = '';
+  const li = document.createElement('li');
+  li.className = 'admin-search-msg';
+  li.textContent = message;
+  results.appendChild(li);
+}
+
+function renderPlaceResults(matches) {
+  if (!Array.isArray(matches) || matches.length === 0) {
+    showPlaceMessage('No matches found.');
+    return;
+  }
+
+  const results = document.getElementById('place-results');
+  results.hidden = false;
+  results.innerHTML = '';
+
+  matches.forEach((match) => {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'admin-search-result';
+    btn.textContent = match.display_name;
+    btn.addEventListener('click', () => {
+      setPinLocation(parseFloat(match.lat), parseFloat(match.lon), 13);
+      hidePlaceResults();
+    });
+    li.appendChild(btn);
+    results.appendChild(li);
+  });
+}
+
+async function handlePlaceSearch() {
+  const query = document.getElementById('place-search').value.trim();
+  if (!query) return;
+
+  showPlaceMessage('Searching…');
+  try {
+    renderPlaceResults(await geocodePlace(query));
+  } catch (err) {
+    showPlaceMessage('Search error: ' + err.message);
   }
 }
 
@@ -412,6 +495,14 @@ function init() {
   });
   document.getElementById('edit-lat').addEventListener('change', syncMarkerFromInputs);
   document.getElementById('edit-lng').addEventListener('change', syncMarkerFromInputs);
+
+  document.getElementById('place-search-btn').addEventListener('click', handlePlaceSearch);
+  document.getElementById('place-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePlaceSearch();
+    }
+  });
 
   refresh();
 }
