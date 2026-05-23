@@ -718,6 +718,11 @@ header nav {
 }
 
 /* Map Type Toggle (Accessible vs Enhanced) */
+/* Hide the layout switcher while the album list is open so it doesn't cover entries. */
+body.menu-open .map-type-toggle {
+    display: none;
+}
+
 .map-type-toggle {
     position: absolute;
     bottom: 30px;

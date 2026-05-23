@@ -241,12 +241,12 @@ class MapStyleControl {
 
 /**
  * Get user's map preference from localStorage
- * @returns {string} 'globe', 'accessible', or 'enhanced'
+ * @returns {string} 'gallery', 'globe', 'accessible', or 'enhanced'
  */
 export function getMapPreference() {
   // Check explicit user choice
   const saved = localStorage.getItem('mapStyle');
-  if (saved === 'globe' || saved === 'accessible' || saved === 'enhanced') {
+  if (saved === 'globe' || saved === 'accessible' || saved === 'enhanced' || saved === 'gallery') {
     return saved;
   }
 
@@ -255,18 +255,8 @@ export function getMapPreference() {
     return 'accessible';
   }
 
-  // Check WebGL support
-  const hasWebGL = (() => {
-    try {
-      const canvas = document.createElement('canvas');
-      return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-    } catch (e) {
-      return false;
-    }
-  })();
-
-  // Default to globe if WebGL supported, otherwise accessible
-  return hasWebGL ? 'globe' : 'accessible';
+  // Default to the accessible 2D map; users can opt into the 3D gallery via the toggle.
+  return 'accessible';
 }
 
 /**

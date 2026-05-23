@@ -521,29 +521,31 @@ function initMenuToggle() {
     const albumMenu = document.getElementById('album-menu');
 
     if (menuToggle && albumMenu) {
-        // Open menu
+        const setMenuOpen = (open) => {
+            albumMenu.classList.toggle('open', open);
+            menuToggle.classList.toggle('active', open);
+            menuToggle.setAttribute('aria-expanded', String(open));
+            // Hide the layout toggle while the list is open so it doesn't cover entries.
+            document.body.classList.toggle('menu-open', open);
+        };
+
+        // Open / close menu
         menuToggle.addEventListener('click', () => {
-            const isOpen = albumMenu.classList.toggle('open');
-            menuToggle.classList.toggle('active');
-            menuToggle.setAttribute('aria-expanded', isOpen);
+            setMenuOpen(!albumMenu.classList.contains('open'));
         });
 
         // Close menu with close button
         if (menuClose) {
             menuClose.addEventListener('click', (e) => {
                 e.stopPropagation();
-                albumMenu.classList.remove('open');
-                menuToggle.classList.remove('active');
-                menuToggle.setAttribute('aria-expanded', 'false');
+                setMenuOpen(false);
             });
         }
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!albumMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-                albumMenu.classList.remove('open');
-                menuToggle.classList.remove('active');
-                menuToggle.setAttribute('aria-expanded', 'false');
+                setMenuOpen(false);
             }
         });
     }
