@@ -146,29 +146,14 @@ async function initLeafletMap() {
 
     console.log('Leaflet map initialized successfully');
 
-    // Fix sizing issue on mobile reload - recalculate size after CSS is applied,
-    // then clamp the min zoom so the world always fills the viewport (no black bands).
+    // Fix sizing issue on mobile reload - recalculate size after CSS is applied
     setTimeout(() => {
         map.invalidateSize();
-        applyWorldFillMinZoom();
     }, 100);
-    map.on('resize', applyWorldFillMinZoom);
 
     // Render markers immediately
     if (albums.length > 0) {
         renderMarkers();
-    }
-}
-
-// Prevent zooming out past the point where the map tiles cover the whole
-// container, which would otherwise expose empty letterbox bands.
-function applyWorldFillMinZoom() {
-    if (!map) return;
-    // Web Mercator tiles only exist up to ~85.05° latitude.
-    const worldBounds = L.latLngBounds([[-85.05, -180], [85.05, 180]]);
-    const minZoom = map.getBoundsZoom(worldBounds, true);
-    if (isFinite(minZoom)) {
-        map.setMinZoom(minZoom);
     }
 }
 

@@ -399,10 +399,16 @@ header nav {
     inset: 0;
 }
 
-/* Map background */
+/* Map background shown beyond the map edges (e.g. above/below the world on tall
+   screens). Soft tones that blend with the light/dark base tiles instead of black. */
 .map-container,
 #map {
-    background: #000000;
+    background: #d3dde3;
+}
+
+[data-theme="dark"] .map-container,
+[data-theme="dark"] #map {
+    background: #0e1726;
 }
 
 /* Globe.GL Tooltip Styles */
