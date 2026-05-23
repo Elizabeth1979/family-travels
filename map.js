@@ -428,6 +428,16 @@ function renderLeafletMarkers() {
 
         attachMarkerBehavior(marker, ariaLabel);
 
+        // Single-album pins open the album on tap/click (the popup is a hover
+        // preview on desktop); without this, mobile needs two taps.
+        if (!isMulti) {
+            const album = group.albums[0];
+            marker.on('click', () => {
+                sessionStorage.setItem('currentAlbum', JSON.stringify(album));
+                window.location.href = `album.html?id=${album.id}`;
+            });
+        }
+
         if (layer) {
             layer.addLayer(marker);
         } else {
