@@ -134,7 +134,18 @@ function renderAlbumList() {
 // ---------------------------------------------------------------------------
 
 function showEditor() {
-  document.getElementById('admin-editor').hidden = false;
+  const editor = document.getElementById('admin-editor');
+  editor.hidden = false;
+  document.querySelector('.admin-grid').classList.add('editing');
+  // On phones the list is now hidden, so bring the editor into view.
+  if (window.matchMedia('(max-width: 800px)').matches) {
+    editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function closeEditor() {
+  document.getElementById('admin-editor').hidden = true;
+  document.querySelector('.admin-grid').classList.remove('editing');
 }
 
 function selectAlbum(album) {
@@ -490,9 +501,8 @@ function init() {
   document.getElementById('new-album-btn').addEventListener('click', startNewAlbum);
   document.getElementById('save-btn').addEventListener('click', handleSave);
   document.getElementById('make-public-btn').addEventListener('click', handleMakePublic);
-  document.getElementById('cancel-btn').addEventListener('click', () => {
-    document.getElementById('admin-editor').hidden = true;
-  });
+  document.getElementById('cancel-btn').addEventListener('click', closeEditor);
+  document.getElementById('back-to-list-btn').addEventListener('click', closeEditor);
   document.getElementById('edit-lat').addEventListener('change', syncMarkerFromInputs);
   document.getElementById('edit-lng').addEventListener('change', syncMarkerFromInputs);
 

@@ -229,6 +229,23 @@
   margin-top: 0;
 }
 
+/* Master->detail on phones: while editing, the editor takes over and the
+   album list is hidden behind a "Back to albums" button (desktop shows both). */
+.admin-back-to-list {
+  display: none;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 800px) {
+  .admin-grid.editing .admin-list-panel {
+    display: none;
+  }
+
+  .admin-back-to-list {
+    display: inline-flex;
+  }
+}
+
 .admin-place-search {
   display: flex;
   gap: 0.5rem;
