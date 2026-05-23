@@ -175,11 +175,10 @@ header {
     overflow: hidden;
 }
 
+/* Album pages are shareable, standalone galleries: hide the site header
+   (back link, share, theme toggle) so they show just the album content. */
 .album-page header {
-    position: relative;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    display: none;
 }
 
 header::before {
