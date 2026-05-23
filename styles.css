@@ -263,6 +263,48 @@ header::before {
     background: rgba(255, 255, 255, 0.35);
 }
 
+/* Admin link in the header (matches the theme-toggle glass styling) */
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.admin-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+[data-theme="light"] .admin-link {
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    color: var(--text-main);
+}
+
+[data-theme="light"] .admin-link:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .admin-link {
+    background: rgba(255, 255, 255, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .admin-link:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
 /* Globe/3D Gallery view - always dark background regardless of theme */
 .globe-view .theme-toggle {
     background: rgba(255, 255, 255, 0.3);
