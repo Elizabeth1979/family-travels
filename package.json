@@ -10,7 +10,8 @@
     "lint": "npm run lint:js && npm run lint:css",
     "lint:js": "eslint . --ext .js",
     "lint:css": "stylelint \"**/*.css\"",
-    "format": "prettier --write \"**/*.{js,css,html,json,md}\""
+    "format": "prettier --write \"**/*.{js,css,html,json,md}\"",
+    "backup": "node scripts/backup.mjs"
   },
   "type": "module",
   "devDependencies": {

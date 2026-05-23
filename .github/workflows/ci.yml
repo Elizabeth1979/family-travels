@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # JS lint + production build guard correctness on every push.
+      # CSS lint (npm run lint:css) is intentionally not run yet: styles.css
+      # and src/index.css carry a large pre-existing set of stylelint
+      # violations. Re-enable it here once that backlog is cleaned up.
+      - run: npm run lint:js
+
+      - run: npm run build

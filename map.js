@@ -3,6 +3,7 @@ import {
     getMapPreference,
     saveMapPreference,
     loadLeaflet,
+    loadMarkerCluster,
     createLeafletMapOptions,
     getLeafletLayers,
     MAP_PROVIDERS
@@ -12,8 +13,16 @@ import {
 let map;
 let albums = [];
 let markers = [];
+let clusterGroup = null;
 let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
-let mapState = {
+let currentFilter = 'all'; // 'all' | 'travel' | 'event'
+
+// Albums matching the active travel/event filter. Type defaults to 'travel'.
+function getFilteredAlbums() {
+    if (currentFilter === 'all') return albums;
+    return albums.filter(a => (a.type || 'travel') === currentFilter);
+}
+const mapState = {
     center: { lat: 20, lng: 0 },
     zoom: 2
 };
@@ -74,7 +83,7 @@ async function initMap() {
         } else if (currentMapType === 'gallery') {
             // Render gallery from cache immediately
             waitForGlobal('mountGallery').then(() => {
-                window.mountGallery('map', albums);
+                window.mountGallery('map', getFilteredAlbums());
                 hideLoading();
             }).catch(console.warn);
         }
@@ -106,6 +115,9 @@ async function initLeafletMap() {
     if (typeof L === 'undefined') {
         throw new Error('Leaflet failed to load');
     }
+
+    // Load the marker clustering plugin (falls back to plain markers if it fails)
+    await loadMarkerCluster();
 
     // Create map with Leaflet
     const options = createLeafletMapOptions({
@@ -175,7 +187,7 @@ async function loadAlbumsAndMarkers() {
         if (currentMapType === 'gallery') {
             try {
                 await waitForGlobal('mountGallery');
-                window.mountGallery('map', albums);
+                window.mountGallery('map', getFilteredAlbums());
                 hideLoading();
             } catch (e) {
                 console.error('Gallery failed to mount:', e);
@@ -214,125 +226,246 @@ function renderMarkers() {
     // Clear existing markers
     markers.forEach(marker => marker.remove());
     markers = [];
+    if (clusterGroup) {
+        clusterGroup.clearLayers();
+    }
 
     renderLeafletMarkers();
 }
 
-// Render markers for Leaflet
-function renderLeafletMarkers() {
+// Group albums whose coordinates are within ~85m of each other into one place,
+// so repeat visits to the same spot collapse into a single pin.
+const PLACE_EPS = 0.0008;
+function groupAlbumsByLocation(list) {
+    const groups = [];
+    list.forEach(album => {
+        if (typeof album.lat !== 'number' || typeof album.lng !== 'number') return;
+        let group = groups.find(g =>
+            Math.abs(g.lat - album.lat) < PLACE_EPS && Math.abs(g.lng - album.lng) < PLACE_EPS
+        );
+        if (!group) {
+            group = { lat: album.lat, lng: album.lng, albums: [] };
+            groups.push(group);
+        }
+        group.albums.push(album);
+    });
+    return groups;
+}
 
-    const bounds = L.latLngBounds();
+// Sort albums chronologically; entries with unparseable dates fall to the end.
+function sortAlbumsByDate(list) {
+    return [...list].sort((a, b) => {
+        const ta = Date.parse(a.date);
+        const tb = Date.parse(b.date);
+        const aValid = !isNaN(ta);
+        const bValid = !isNaN(tb);
+        if (aValid && bValid) return ta - tb;
+        if (aValid) return -1;
+        if (bValid) return 1;
+        return (a.title || '').localeCompare(b.title || '');
+    });
+}
 
-    albums.forEach(album => {
-        if (typeof album.lat !== 'number' || typeof album.lng !== 'number') {
-            return;
+// Popup listing every trip taken at one location, sorted by date.
+function createMultiAlbumPopup(albumsAtPlace) {
+    const sorted = sortAlbumsByDate(albumsAtPlace);
+
+    const div = document.createElement('div');
+    div.className = 'popup-content popup-multi';
+
+    const allEvents = sorted.every(a => (a.type || 'travel') === 'event');
+    const allTravels = sorted.every(a => (a.type || 'travel') === 'travel');
+    const noun = allEvents ? 'events' : allTravels ? 'trips' : 'albums';
+
+    const title = document.createElement('h3');
+    title.className = 'popup-title';
+    title.textContent = `${sorted.length} ${noun} here`;
+    div.appendChild(title);
+
+    const list = document.createElement('ul');
+    list.className = 'popup-trip-list';
+
+    sorted.forEach(album => {
+        const li = document.createElement('li');
+
+        const link = document.createElement('a');
+        link.href = `album.html?id=${album.id}`;
+        link.className = 'popup-trip-link';
+        link.addEventListener('click', () => {
+            sessionStorage.setItem('currentAlbum', JSON.stringify(album));
+        });
+
+        if (album.cover) {
+            const img = document.createElement('img');
+            img.src = album.cover;
+            img.alt = '';
+            img.className = 'popup-trip-thumb';
+            img.loading = 'lazy';
+            link.appendChild(img);
         }
 
-        // Create popup content
-        const popupContent = createPopupContent(album);
+        const text = document.createElement('span');
+        text.className = 'popup-trip-text';
 
-        // Create marker with popup that doesn't auto-close
-        const marker = L.marker([album.lat, album.lng])
-            .bindPopup(popupContent, {
-                autoClose: false,
-                closeOnClick: false
-            })
-            .addTo(map);
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'popup-trip-title';
+        titleSpan.textContent = album.title;
+        text.appendChild(titleSpan);
 
-        // Track if mouse is over marker or popup
-        let isOverMarkerOrPopup = false;
-        let closeTimeout = null;
+        if (album.date) {
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'popup-trip-date';
+            dateSpan.textContent = album.date;
+            text.appendChild(dateSpan);
+        }
 
-        const scheduleClose = () => {
-            closeTimeout = setTimeout(() => {
-                if (!isOverMarkerOrPopup) {
-                    marker.closePopup();
-                }
-            }, 300);
-        };
+        link.appendChild(text);
+        li.appendChild(link);
+        list.appendChild(li);
+    });
 
-        const cancelClose = () => {
-            if (closeTimeout) {
-                clearTimeout(closeTimeout);
-                closeTimeout = null;
-            }
-        };
+    div.appendChild(list);
+    return div;
+}
 
-        // Open on marker hover
-        marker.on('mouseover', function (e) {
-            isOverMarkerOrPopup = true;
-            cancelClose();
-            this.openPopup();
-        });
+// Hover-to-open popup + keyboard support, shared by single and grouped markers.
+function attachMarkerBehavior(marker, ariaLabel) {
+    let isOver = false;
+    let closeTimeout = null;
 
-        marker.on('mouseout', function (e) {
-            isOverMarkerOrPopup = false;
-            scheduleClose();
-        });
+    const scheduleClose = () => {
+        closeTimeout = setTimeout(() => {
+            if (!isOver) marker.closePopup();
+        }, 300);
+    };
+    const cancelClose = () => {
+        if (closeTimeout) {
+            clearTimeout(closeTimeout);
+            closeTimeout = null;
+        }
+    };
 
-        // Track popup hover to keep it open
-        marker.on('popupopen', function (e) {
-            const popupEl = e.popup.getElement();
-            if (popupEl) {
-                popupEl.addEventListener('mouseenter', () => {
-                    isOverMarkerOrPopup = true;
-                    cancelClose();
-                });
-                popupEl.addEventListener('mouseleave', () => {
-                    isOverMarkerOrPopup = false;
-                    scheduleClose();
-                });
+    marker.on('mouseover', function () {
+        isOver = true;
+        cancelClose();
+        this.openPopup();
+    });
+    marker.on('mouseout', function () {
+        isOver = false;
+        scheduleClose();
+    });
+    marker.on('popupopen', function (e) {
+        const popupEl = e.popup.getElement();
+        if (popupEl) {
+            popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
+            popupEl.addEventListener('mouseleave', () => { isOver = false; scheduleClose(); });
+        }
+    });
 
-                // Focus the button inside popup for keyboard users
+    // Marker DOM element only exists once it is actually placed (not in a cluster)
+    marker.on('add', () => {
+        const el = marker.getElement();
+        if (!el) return;
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', ariaLabel);
+        el.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                marker.openPopup();
                 setTimeout(() => {
-                    const btn = popupEl.querySelector('.open-album-btn');
-                    if (btn && document.activeElement !== btn) {
-                        // Only auto-focus if opened via keyboard (check if marker element was focused)
-                        const markerEl = marker.getElement();
-                        if (markerEl && document.activeElement === markerEl) {
-                            btn.focus();
-                        }
-                    }
+                    const popupEl = marker.getPopup().getElement();
+                    const focusable = popupEl && popupEl.querySelector('.open-album-btn, .popup-trip-link');
+                    if (focusable) focusable.focus();
                 }, 100);
             }
         });
+    });
+}
 
-        // Add keyboard support for markers
-        const markerEl = marker.getElement();
-        if (markerEl) {
-            markerEl.setAttribute('tabindex', '0');
-            markerEl.setAttribute('role', 'button');
-            markerEl.setAttribute('aria-label', `View ${album.title} album`);
+// Distinct marker for family-event albums (vs the default Leaflet pin for travels).
+function createEventIcon() {
+    return L.divIcon({
+        className: 'event-marker',
+        html: '<span class="event-marker-pin" aria-hidden="true"></span>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -28]
+    });
+}
 
-            markerEl.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    marker.openPopup();
+// Render markers for Leaflet, grouping repeat visits and clustering nearby pins
+function renderLeafletMarkers() {
+    const useCluster = typeof L.markerClusterGroup === 'function';
 
-                    // Focus the button after popup opens
-                    setTimeout(() => {
-                        const popupEl = marker.getPopup().getElement();
-                        if (popupEl) {
-                            const btn = popupEl.querySelector('.open-album-btn');
-                            if (btn) {
-                                btn.focus();
-                            }
-                        }
-                    }, 100);
-                }
+    let layer = null;
+    if (useCluster) {
+        if (!clusterGroup) {
+            clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 45,
+                showCoverageOnHover: false,
+                spiderfyOnMaxZoom: true
+            });
+            map.addLayer(clusterGroup);
+        }
+        layer = clusterGroup;
+    }
+
+    const groups = groupAlbumsByLocation(getFilteredAlbums());
+
+    groups.forEach(group => {
+        const isMulti = group.albums.length > 1;
+        const isEventGroup = group.albums.every(a => (a.type || 'travel') === 'event');
+        const popupContent = isMulti
+            ? createMultiAlbumPopup(group.albums)
+            : createPopupContent(group.albums[0]);
+        const ariaLabel = isMulti
+            ? `${group.albums.length} albums at this location`
+            : `View ${group.albums[0].title} album`;
+
+        const marker = L.marker([group.lat, group.lng], isEventGroup ? { icon: createEventIcon() } : undefined)
+            .bindPopup(popupContent, { autoClose: false, closeOnClick: false });
+
+        attachMarkerBehavior(marker, ariaLabel);
+
+        // Single-album pins open the album on tap/click (the popup is a hover
+        // preview on desktop); without this, mobile needs two taps.
+        if (!isMulti) {
+            const album = group.albums[0];
+            marker.on('click', () => {
+                sessionStorage.setItem('currentAlbum', JSON.stringify(album));
+                window.location.href = `album.html?id=${album.id}`;
             });
         }
 
+        if (layer) {
+            layer.addLayer(marker);
+        } else {
+            marker.addTo(map);
+        }
+
         markers.push(marker);
-        bounds.extend([album.lat, album.lng]);
     });
 
-    // Fit map to markers if any exist
-    if (albums.length > 0) {
-        map.fitBounds(bounds, {
-            padding: [50, 50]
-        });
+    // Open framed on the densest area (so a lone faraway pin doesn't force a
+    // zoomed-out, letterboxed world view). Users can still pinch-zoom out fully.
+    const focus = computeFocusBounds(groups);
+    if (focus && focus.isValid()) {
+        map.fitBounds(focus, { padding: [40, 40], maxZoom: 9 });
     }
+}
+
+// Pick the bounds of the largest group of nearby places to frame on load.
+function computeFocusBounds(groups) {
+    if (!groups || groups.length === 0) return null;
+    const RADIUS_M = 800000; // ~800 km: places this close count as one "area"
+    let bestCluster = [groups[0]];
+    groups.forEach(g => {
+        const here = L.latLng(g.lat, g.lng);
+        const cluster = groups.filter(o => here.distanceTo(L.latLng(o.lat, o.lng)) <= RADIUS_M);
+        if (cluster.length > bestCluster.length) bestCluster = cluster;
+    });
+    return L.latLngBounds(bestCluster.map(g => [g.lat, g.lng]));
 }
 
 // Create popup content with cover image and link
@@ -382,7 +515,7 @@ function populateAlbumList() {
     const listContainer = document.getElementById('album-list-items');
     listContainer.innerHTML = '';
 
-    albums.forEach(album => {
+    getFilteredAlbums().forEach(album => {
         const li = document.createElement('li');
 
         const link = document.createElement('a');
@@ -411,29 +544,31 @@ function initMenuToggle() {
     const albumMenu = document.getElementById('album-menu');
 
     if (menuToggle && albumMenu) {
-        // Open menu
+        const setMenuOpen = (open) => {
+            albumMenu.classList.toggle('open', open);
+            menuToggle.classList.toggle('active', open);
+            menuToggle.setAttribute('aria-expanded', String(open));
+            // Hide the layout toggle while the list is open so it doesn't cover entries.
+            document.body.classList.toggle('menu-open', open);
+        };
+
+        // Open / close menu
         menuToggle.addEventListener('click', () => {
-            const isOpen = albumMenu.classList.toggle('open');
-            menuToggle.classList.toggle('active');
-            menuToggle.setAttribute('aria-expanded', isOpen);
+            setMenuOpen(!albumMenu.classList.contains('open'));
         });
 
         // Close menu with close button
         if (menuClose) {
             menuClose.addEventListener('click', (e) => {
                 e.stopPropagation();
-                albumMenu.classList.remove('open');
-                menuToggle.classList.remove('active');
-                menuToggle.setAttribute('aria-expanded', 'false');
+                setMenuOpen(false);
             });
         }
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!albumMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-                albumMenu.classList.remove('open');
-                menuToggle.classList.remove('active');
-                menuToggle.setAttribute('aria-expanded', 'false');
+                setMenuOpen(false);
             }
         });
     }
@@ -461,8 +596,7 @@ window.updateMapTheme = function (theme) {
     newBaseLayer.addTo(map);
 
     // Re-render markers to ensure they are on top
-    if (markers.length > 0) {
-        markers.forEach(marker => marker.remove());
+    if (albums.length > 0) {
         renderMarkers();
     }
 };
@@ -489,6 +623,11 @@ function destroyCurrentMap() {
         // Clear markers first
         markers.forEach(marker => marker.remove());
         markers = [];
+        if (clusterGroup) {
+            clusterGroup.clearLayers();
+            map.removeLayer(clusterGroup);
+            clusterGroup = null;
+        }
 
         // Remove map
         map.remove();
@@ -559,7 +698,7 @@ async function switchMapType(newType) {
             await initGalleryView();
             // Mount the React gallery
             if (albums.length > 0 && typeof window.mountGallery === 'function') {
-                window.mountGallery('map', albums);
+                window.mountGallery('map', getFilteredAlbums());
             }
         } else {
             document.body.classList.remove('gallery-view');
@@ -619,12 +758,43 @@ function initMapTypeToggle() {
     });
 }
 
-// Initialize map when page loads
+// Travel/event filter buttons in the album sidebar.
+function initAlbumFilter() {
+    const buttons = document.querySelectorAll('.album-filter-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const filter = btn.getAttribute('data-filter') || 'all';
+            if (filter === currentFilter) return;
+            currentFilter = filter;
+            buttons.forEach(b => {
+                const active = b === btn;
+                b.classList.toggle('active', active);
+                b.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            applyAlbumFilter();
+        });
+    });
+}
+
+// Re-render the active view (map markers or 3D gallery) and the sidebar list
+// for the current filter.
+function applyAlbumFilter() {
+    populateAlbumList();
+    if (currentMapType === 'gallery') {
+        if (typeof window.mountGallery === 'function') {
+            window.mountGallery('map', getFilteredAlbums());
+        }
+    } else {
+        renderMarkers();
+    }
+}
+
 // Initialize map when page loads
 const init = () => {
     initMap();
     initMenuToggle();
     initMapTypeToggle();
+    initAlbumFilter();
 };
 
 if (document.readyState === 'loading') {

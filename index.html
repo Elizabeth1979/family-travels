@@ -80,6 +80,14 @@
             <aside id="album-menu" class="album-list" aria-label="List of travel albums">
                 <button id="menu-close" class="menu-close" aria-label="Close menu">×</button>
                 <h2>All Albums</h2>
+                <div class="album-filter" role="group" aria-label="Filter albums by type">
+                    <button type="button" class="album-filter-btn active" data-filter="all"
+                        aria-pressed="true">All</button>
+                    <button type="button" class="album-filter-btn" data-filter="travel"
+                        aria-pressed="false">Travels</button>
+                    <button type="button" class="album-filter-btn" data-filter="event"
+                        aria-pressed="false">Events</button>
+                </div>
                 <ul id="album-list-items">
                     <!-- Dynamically populated -->
                 </ul>

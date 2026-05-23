@@ -241,12 +241,12 @@ class MapStyleControl {
 
 /**
  * Get user's map preference from localStorage
- * @returns {string} 'globe', 'accessible', or 'enhanced'
+ * @returns {string} 'gallery', 'globe', 'accessible', or 'enhanced'
  */
 export function getMapPreference() {
   // Check explicit user choice
   const saved = localStorage.getItem('mapStyle');
-  if (saved === 'globe' || saved === 'accessible' || saved === 'enhanced') {
+  if (saved === 'globe' || saved === 'accessible' || saved === 'enhanced' || saved === 'gallery') {
     return saved;
   }
 
@@ -255,18 +255,8 @@ export function getMapPreference() {
     return 'accessible';
   }
 
-  // Check WebGL support
-  const hasWebGL = (() => {
-    try {
-      const canvas = document.createElement('canvas');
-      return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-    } catch (e) {
-      return false;
-    }
-  })();
-
-  // Default to globe if WebGL supported, otherwise accessible
-  return hasWebGL ? 'globe' : 'accessible';
+  // Default to the accessible 2D map; users can opt into the 3D gallery via the toggle.
+  return 'accessible';
 }
 
 /**
@@ -303,6 +293,42 @@ export async function loadLeaflet() {
     script.crossOrigin = '';
     script.onload = () => resolve();
     script.onerror = () => reject(new Error('Failed to load Leaflet'));
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Load the Leaflet.markercluster plugin (CSS + JS) after Leaflet is present.
+ * Resolves even if it fails to load so callers can fall back to plain markers.
+ * @returns {Promise<boolean>} true if the plugin is available
+ */
+export async function loadMarkerCluster() {
+  if (typeof L !== 'undefined' && L.markerClusterGroup) {
+    return true;
+  }
+  if (typeof L === 'undefined') {
+    await loadLeaflet();
+  }
+
+  const base = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/';
+  const cssFiles = ['MarkerCluster.css', 'MarkerCluster.Default.css'];
+  cssFiles.forEach((name) => {
+    if (!document.querySelector(`link[href="${base}${name}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = base + name;
+      document.head.appendChild(link);
+    }
+  });
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = base + 'leaflet.markercluster.js';
+    script.onload = () => resolve(typeof L !== 'undefined' && !!L.markerClusterGroup);
+    script.onerror = () => {
+      console.warn('Failed to load marker cluster plugin; using plain markers');
+      resolve(false);
+    };
     document.head.appendChild(script);
   });
 }
