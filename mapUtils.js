@@ -308,6 +308,42 @@ export async function loadLeaflet() {
 }
 
 /**
+ * Load the Leaflet.markercluster plugin (CSS + JS) after Leaflet is present.
+ * Resolves even if it fails to load so callers can fall back to plain markers.
+ * @returns {Promise<boolean>} true if the plugin is available
+ */
+export async function loadMarkerCluster() {
+  if (typeof L !== 'undefined' && L.markerClusterGroup) {
+    return true;
+  }
+  if (typeof L === 'undefined') {
+    await loadLeaflet();
+  }
+
+  const base = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/';
+  const cssFiles = ['MarkerCluster.css', 'MarkerCluster.Default.css'];
+  cssFiles.forEach((name) => {
+    if (!document.querySelector(`link[href="${base}${name}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = base + name;
+      document.head.appendChild(link);
+    }
+  });
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = base + 'leaflet.markercluster.js';
+    script.onload = () => resolve(typeof L !== 'undefined' && !!L.markerClusterGroup);
+    script.onerror = () => {
+      console.warn('Failed to load marker cluster plugin; using plain markers');
+      resolve(false);
+    };
+    document.head.appendChild(script);
+  });
+}
+
+/**
  * Unified createMapOptions that delegates to library-specific function
  * Used by map.js for backwards compatibility
  * @param {Object} customOptions - Custom options to merge
