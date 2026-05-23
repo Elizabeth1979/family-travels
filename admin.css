@@ -1,5 +1,12 @@
 /* Admin control panel styles. Reuses theme variables from styles.css. */
 
+/* The shared site header is absolutely positioned to overlay the map. The
+   admin page has no map behind it, so keep the header in normal flow; that
+   way the content sits below it instead of under the floating back button. */
+.admin-page header {
+  position: static;
+}
+
 .admin-page .header-text h1 {
   font-size: 1.4rem;
   margin: 0;
@@ -48,7 +55,8 @@
 }
 
 .admin-field input,
-.admin-field textarea {
+.admin-field textarea,
+.admin-field select {
   padding: 0.55rem 0.7rem;
   font: inherit;
   color: var(--text-main, #1a1a1a);
@@ -58,9 +66,22 @@
 }
 
 .admin-field input:focus,
-.admin-field textarea:focus {
+.admin-field textarea:focus,
+.admin-field select:focus {
   outline: 3px solid var(--focus-color, #667eea);
   outline-offset: 1px;
+}
+
+/* Native selects keep their platform chrome otherwise; strip it and draw our
+   own chevron so the Type dropdown matches the text inputs. */
+.admin-field select {
+  appearance: none;
+  padding-right: 2rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 0.75rem;
 }
 
 .admin-hint {
@@ -206,6 +227,73 @@
 
 .admin-editor h2 {
   margin-top: 0;
+}
+
+/* Master->detail on phones: while editing, the editor takes over and the
+   album list is hidden behind a "Back to albums" button (desktop shows both). */
+.admin-back-to-list {
+  display: none;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 800px) {
+  .admin-grid.editing .admin-list-panel {
+    display: none;
+  }
+
+  .admin-back-to-list {
+    display: inline-flex;
+  }
+}
+
+.admin-place-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-place-search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-search-results {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  border: 1px solid var(--border-color, #e2e2e2);
+  border-radius: 8px;
+  overflow: hidden auto;
+  max-height: 220px;
+}
+
+.admin-search-result {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  color: var(--text-main, #1a1a1a);
+  background: var(--bg-card, #fff);
+  border: none;
+  border-bottom: 1px solid var(--border-color, #e2e2e2);
+  cursor: pointer;
+}
+
+.admin-search-results li:last-child .admin-search-result {
+  border-bottom: none;
+}
+
+.admin-search-result:hover,
+.admin-search-result:focus-visible {
+  background: var(--bg-hover, rgb(102 126 234 / 8%));
+}
+
+.admin-search-msg {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
 }
 
 .admin-pin-map {

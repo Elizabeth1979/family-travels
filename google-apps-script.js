@@ -12,7 +12,7 @@ const ENABLE_AI_ALT_TEXT = false;  // Disabled - enable after testing
 // Shared secret that gates all write actions (doPost). Set this to a long
 // random string and enter the SAME value in the admin page. Keep it private:
 // anyone with this token + the master folder ID can edit your albums.
-const ADMIN_TOKEN = "CHANGE_ME_SET_A_LONG_RANDOM_SECRET";
+const ADMIN_TOKEN = "yolka";
 
 // Master folder used when creating brand-new albums from the admin page.
 const ADMIN_MASTER_FOLDER_ID = "1WMN1Y0Xa8tulV5zvP5tDawXz2uXCDxRL";
