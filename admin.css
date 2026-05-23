@@ -1,5 +1,12 @@
 /* Admin control panel styles. Reuses theme variables from styles.css. */
 
+/* The shared site header is absolutely positioned to overlay the map. The
+   admin page has no map behind it, so keep the header in normal flow; that
+   way the content sits below it instead of under the floating back button. */
+.admin-page header {
+  position: static;
+}
+
 .admin-page .header-text h1 {
   font-size: 1.4rem;
   margin: 0;
