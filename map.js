@@ -396,7 +396,6 @@ function createEventIcon() {
 
 // Render markers for Leaflet, grouping repeat visits and clustering nearby pins
 function renderLeafletMarkers() {
-    const bounds = L.latLngBounds();
     const useCluster = typeof L.markerClusterGroup === 'function';
 
     let layer = null;
@@ -436,13 +435,27 @@ function renderLeafletMarkers() {
         }
 
         markers.push(marker);
-        bounds.extend([group.lat, group.lng]);
     });
 
-    // Fit map to all markers if any exist
-    if (markers.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
+    // Open framed on the densest area (so a lone faraway pin doesn't force a
+    // zoomed-out, letterboxed world view). Users can still pinch-zoom out fully.
+    const focus = computeFocusBounds(groups);
+    if (focus && focus.isValid()) {
+        map.fitBounds(focus, { padding: [40, 40], maxZoom: 9 });
     }
+}
+
+// Pick the bounds of the largest group of nearby places to frame on load.
+function computeFocusBounds(groups) {
+    if (!groups || groups.length === 0) return null;
+    const RADIUS_M = 800000; // ~800 km: places this close count as one "area"
+    let bestCluster = [groups[0]];
+    groups.forEach(g => {
+        const here = L.latLng(g.lat, g.lng);
+        const cluster = groups.filter(o => here.distanceTo(L.latLng(o.lat, o.lng)) <= RADIUS_M);
+        if (cluster.length > bestCluster.length) bestCluster = cluster;
+    });
+    return L.latLngBounds(bestCluster.map(g => [g.lat, g.lng]));
 }
 
 // Create popup content with cover image and link
