@@ -8,10 +8,11 @@
 // LEAFLET CONFIGURATION
 // =============================================================================
 
-// World bounds to prevent grey areas
+// World bounds matching the Web Mercator tile coverage (~85.05°), so you can't
+// pan into the empty area above/below the map.
 const WORLD_BOUNDS_LEAFLET = {
-  southWest: [-90, -180],
-  northEast: [90, 180]
+  southWest: [-85.05, -180],
+  northEast: [85.05, 180]
 };
 
 // Map Providers Configuration
