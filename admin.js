@@ -144,6 +144,7 @@ function selectAlbum(album) {
 
   document.getElementById('editor-heading').textContent = 'Edit album';
   document.getElementById('edit-title').value = album.title || '';
+  document.getElementById('edit-type').value = album.type === 'event' ? 'event' : 'travel';
   document.getElementById('edit-date').value = album.date || '';
   document.getElementById('edit-description').value = album.description || '';
 
@@ -171,6 +172,7 @@ function startNewAlbum() {
 
   document.getElementById('editor-heading').textContent = 'New album';
   document.getElementById('edit-title').value = '';
+  document.getElementById('edit-type').value = 'travel';
   document.getElementById('edit-date').value = '';
   document.getElementById('edit-description').value = '';
   document.getElementById('edit-lat').value = '';
@@ -288,6 +290,7 @@ function readEditorFields() {
   const lngRaw = document.getElementById('edit-lng').value;
   return {
     title: document.getElementById('edit-title').value.trim(),
+    type: document.getElementById('edit-type').value === 'event' ? 'event' : 'travel',
     date: document.getElementById('edit-date').value.trim(),
     description: document.getElementById('edit-description').value.trim(),
     lat: latRaw === '' ? '' : parseFloat(latRaw),
@@ -317,6 +320,7 @@ async function handleSave() {
         id: result.id,
         folderId: result.folderId,
         title: fields.title,
+        type: fields.type,
         date: fields.date,
         description: fields.description,
         lat: fields.lat === '' ? DEFAULT_LAT : fields.lat,
@@ -343,6 +347,7 @@ async function handleSave() {
         date: fields.date,
         description: fields.description,
         coverId: fields.coverId || undefined,
+        type: fields.type,
       });
       setStatus(`Saved "${fields.title}".`, 'success');
     }

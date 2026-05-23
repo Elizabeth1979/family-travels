@@ -5,7 +5,6 @@ import * as THREE from "three"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import {
     OrbitControls,
-    Environment,
     Html,
     Plane,
     Sphere,
@@ -548,7 +547,6 @@ export default function StellarCardGallery({ cards }) {
                     <color attach="background" args={['#000000']} />
                     <Suspense fallback={null}>
                         <Starfield />
-                        <Environment preset="night" />
                         <ambientLight intensity={0.4} />
                         <pointLight position={[10, 10, 10]} intensity={0.6} />
                         <pointLight position={[-10, -10, -10]} intensity={0.3} />

@@ -998,6 +998,64 @@ header nav {
     border-bottom: 2px solid var(--border-color);
 }
 
+.album-filter {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 1.25rem;
+    position: relative;
+    z-index: 1;
+}
+
+.album-filter-btn {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-main);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.album-filter-btn:hover {
+    border-color: var(--primary-color);
+}
+
+.album-filter-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* Distinct pin for family-event albums (vs the default Leaflet travel pin). */
+.event-marker {
+    background: transparent;
+    border: none;
+}
+
+.event-marker-pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    background: #f59e0b;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.event-marker-pin::before {
+    content: '★';
+    transform: rotate(45deg);
+}
+
 .album-list ul {
     list-style: none;
     position: relative;

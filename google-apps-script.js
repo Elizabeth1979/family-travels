@@ -145,9 +145,10 @@ function listAlbums(masterId) {
       let date = '';
       let albumDesc = '';
       let coverId = '';
+      let type = 'travel';
 
       if (description) {
-        // Format: "lat,lng | date | description | coverFileId" (last field optional)
+        // Format: "lat,lng | date | description | coverFileId | type" (last two optional)
         const parts = description.split('|').map(p => p.trim());
 
         // Parse coordinates from first part
@@ -172,6 +173,11 @@ function listAlbums(masterId) {
         // Parse explicit cover image file ID from fourth part
         if (parts[3]) {
           coverId = parts[3];
+        }
+
+        // Parse album type from fifth part ('event' or 'travel'); default travel
+        if (parts[4] && parts[4].toLowerCase() === 'event') {
+          type = 'event';
         }
       }
 
@@ -214,7 +220,8 @@ function listAlbums(masterId) {
         lat: lat,
         lng: lng,
         folderId: folderId,
-        cover: coverUrl
+        cover: coverUrl,
+        type: type
       });
     }
 
@@ -340,19 +347,23 @@ function doPost(e) {
 }
 
 // Build the folder-description metadata string from individual fields:
-// "lat,lng | date | description | coverFileId" (coords/cover optional).
-function buildMetaDescription(lat, lng, date, description, coverId) {
+// "lat,lng | date | description | coverFileId | type" (coords/cover optional; type
+// defaults to travel and is only written for events).
+function buildMetaDescription(lat, lng, date, description, coverId, type) {
   const hasCoords = lat !== '' && lat != null && lng !== '' && lng != null;
   const coords = hasCoords ? `${lat},${lng}` : '';
   const parts = [coords, date || '', description || ''];
-  if (coverId) parts.push(coverId);
+  const isEvent = (type || '').toLowerCase() === 'event';
+  // coverId is slot 4 and type is slot 5; keep slot 4 present (even empty) when type is set.
+  if (coverId || isEvent) parts.push(coverId || '');
+  if (isEvent) parts.push('event');
   return parts.join(' | ');
 }
 
 function adminSetMeta(body) {
   const folder = DriveApp.getFolderById(body.folderId);
   folder.setDescription(
-    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId)
+    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId, body.type)
   );
   return jsonResponse({ ok: true, folderId: body.folderId });
 }
@@ -395,7 +406,7 @@ function adminCreateAlbum(body) {
 
   const folder = master.createFolder(title);
   folder.setDescription(
-    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId)
+    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId, body.type)
   );
   folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 

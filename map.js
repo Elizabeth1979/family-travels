@@ -15,6 +15,13 @@ let albums = [];
 let markers = [];
 let clusterGroup = null;
 let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
+let currentFilter = 'all'; // 'all' | 'travel' | 'event'
+
+// Albums matching the active travel/event filter. Type defaults to 'travel'.
+function getFilteredAlbums() {
+    if (currentFilter === 'all') return albums;
+    return albums.filter(a => (a.type || 'travel') === currentFilter);
+}
 const mapState = {
     center: { lat: 20, lng: 0 },
     zoom: 2
@@ -76,7 +83,7 @@ async function initMap() {
         } else if (currentMapType === 'gallery') {
             // Render gallery from cache immediately
             waitForGlobal('mountGallery').then(() => {
-                window.mountGallery('map', albums);
+                window.mountGallery('map', getFilteredAlbums());
                 hideLoading();
             }).catch(console.warn);
         }
@@ -180,7 +187,7 @@ async function loadAlbumsAndMarkers() {
         if (currentMapType === 'gallery') {
             try {
                 await waitForGlobal('mountGallery');
-                window.mountGallery('map', albums);
+                window.mountGallery('map', getFilteredAlbums());
                 hideLoading();
             } catch (e) {
                 console.error('Gallery failed to mount:', e);
@@ -266,9 +273,13 @@ function createMultiAlbumPopup(albumsAtPlace) {
     const div = document.createElement('div');
     div.className = 'popup-content popup-multi';
 
+    const allEvents = sorted.every(a => (a.type || 'travel') === 'event');
+    const allTravels = sorted.every(a => (a.type || 'travel') === 'travel');
+    const noun = allEvents ? 'events' : allTravels ? 'trips' : 'albums';
+
     const title = document.createElement('h3');
     title.className = 'popup-title';
-    title.textContent = `${sorted.length} trips here`;
+    title.textContent = `${sorted.length} ${noun} here`;
     div.appendChild(title);
 
     const list = document.createElement('ul');
@@ -372,6 +383,17 @@ function attachMarkerBehavior(marker, ariaLabel) {
     });
 }
 
+// Distinct marker for family-event albums (vs the default Leaflet pin for travels).
+function createEventIcon() {
+    return L.divIcon({
+        className: 'event-marker',
+        html: '<span class="event-marker-pin" aria-hidden="true"></span>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -28]
+    });
+}
+
 // Render markers for Leaflet, grouping repeat visits and clustering nearby pins
 function renderLeafletMarkers() {
     const bounds = L.latLngBounds();
@@ -390,18 +412,19 @@ function renderLeafletMarkers() {
         layer = clusterGroup;
     }
 
-    const groups = groupAlbumsByLocation(albums);
+    const groups = groupAlbumsByLocation(getFilteredAlbums());
 
     groups.forEach(group => {
         const isMulti = group.albums.length > 1;
+        const isEventGroup = group.albums.every(a => (a.type || 'travel') === 'event');
         const popupContent = isMulti
             ? createMultiAlbumPopup(group.albums)
             : createPopupContent(group.albums[0]);
         const ariaLabel = isMulti
-            ? `${group.albums.length} trips at this location`
+            ? `${group.albums.length} albums at this location`
             : `View ${group.albums[0].title} album`;
 
-        const marker = L.marker([group.lat, group.lng])
+        const marker = L.marker([group.lat, group.lng], isEventGroup ? { icon: createEventIcon() } : undefined)
             .bindPopup(popupContent, { autoClose: false, closeOnClick: false });
 
         attachMarkerBehavior(marker, ariaLabel);
@@ -469,7 +492,7 @@ function populateAlbumList() {
     const listContainer = document.getElementById('album-list-items');
     listContainer.innerHTML = '';
 
-    albums.forEach(album => {
+    getFilteredAlbums().forEach(album => {
         const li = document.createElement('li');
 
         const link = document.createElement('a');
@@ -650,7 +673,7 @@ async function switchMapType(newType) {
             await initGalleryView();
             // Mount the React gallery
             if (albums.length > 0 && typeof window.mountGallery === 'function') {
-                window.mountGallery('map', albums);
+                window.mountGallery('map', getFilteredAlbums());
             }
         } else {
             document.body.classList.remove('gallery-view');
@@ -710,12 +733,43 @@ function initMapTypeToggle() {
     });
 }
 
-// Initialize map when page loads
+// Travel/event filter buttons in the album sidebar.
+function initAlbumFilter() {
+    const buttons = document.querySelectorAll('.album-filter-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const filter = btn.getAttribute('data-filter') || 'all';
+            if (filter === currentFilter) return;
+            currentFilter = filter;
+            buttons.forEach(b => {
+                const active = b === btn;
+                b.classList.toggle('active', active);
+                b.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            applyAlbumFilter();
+        });
+    });
+}
+
+// Re-render the active view (map markers or 3D gallery) and the sidebar list
+// for the current filter.
+function applyAlbumFilter() {
+    populateAlbumList();
+    if (currentMapType === 'gallery') {
+        if (typeof window.mountGallery === 'function') {
+            window.mountGallery('map', getFilteredAlbums());
+        }
+    } else {
+        renderMarkers();
+    }
+}
+
 // Initialize map when page loads
 const init = () => {
     initMap();
     initMenuToggle();
     initMapTypeToggle();
+    initAlbumFilter();
 };
 
 if (document.readyState === 'loading') {
