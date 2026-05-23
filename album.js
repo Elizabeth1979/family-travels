@@ -830,8 +830,11 @@ function setupVideoObserver() {
 function showError(message) {
   const galleryEl = document.getElementById("gallery");
   // Preserve header if it exists or add it
-  const headerHtml = '<div class="section-header"><h2>Photos</h2></div>';
-  galleryEl.innerHTML = headerHtml + `<p class="error">${message}</p>`;
+  galleryEl.innerHTML = '<div class="section-header"><h2>Photos</h2></div>';
+  const errorEl = document.createElement("p");
+  errorEl.className = "error";
+  errorEl.textContent = message;
+  galleryEl.appendChild(errorEl);
 }
 
 // Handle share button click
@@ -860,15 +863,16 @@ function showToast(message) {
     existingToast.remove();
   }
 
-  // Create new toast
+  // Create new toast (static SVG markup is safe; message set via textContent to avoid injection)
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
-        <span>${message}</span>
+        <span></span>
     `;
+  toast.querySelector('span').textContent = message;
 
   document.body.appendChild(toast);
 
