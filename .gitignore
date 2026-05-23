@@ -22,3 +22,9 @@ node_modules/
 test/
 *.test.js
 dist/
+
+# Local archive produced by `npm run backup`
+backup/
+
+# Vercel
+.vercel/
