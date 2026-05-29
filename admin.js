@@ -8,6 +8,11 @@ const DEFAULT_LNG = 35.2137;
 
 const TOKEN_KEY = 'admin_token';
 
+// Same key/shape the public site uses (utils.js fetchAlbums), so the map and
+// admin page warm each other's cache. Admin reads it for an instant first paint
+// (cache-then-network) and writes to it after every fresh fetch.
+const ALBUMS_CACHE_KEY = 'family_travel_albums';
+
 let albums = [];
 let mode = 'edit'; // 'edit' | 'new'
 let current = null; // currently edited album
@@ -66,14 +71,37 @@ function setStatus(message, kind = 'info') {
 // ---------------------------------------------------------------------------
 
 async function loadAlbumsFresh() {
-  // Bypass the 5-minute cache used by the public site so the admin sees changes.
+  // Cache-bust so the admin always gets the true current state from Apps Script
+  // (e.g. right after an edit), regardless of the 5-minute public-site cache.
   const response = await fetch(
     `${CONFIG.APPS_SCRIPT_URL}?action=list&master=${CONFIG.MASTER_FOLDER_ID}&t=${Date.now()}`
   );
   if (!response.ok) throw new Error(`Failed to load albums: ${response.status}`);
   const data = await response.json();
   if (data && data.error) throw new Error(data.error);
-  return Array.isArray(data) ? data : [];
+  const list = Array.isArray(data) ? data : [];
+  // Refresh the shared cache so the next admin/map load paints instantly.
+  try {
+    localStorage.setItem(ALBUMS_CACHE_KEY, JSON.stringify({ data: list, timestamp: Date.now() }));
+  } catch (e) {
+    console.warn('Album cache write failed:', e);
+  }
+  return list;
+}
+
+// Read whatever albums are in the shared cache (ignoring age) for an instant
+// first paint. Returns null if there's nothing usable cached.
+function getCachedAlbums() {
+  try {
+    const cached = localStorage.getItem(ALBUMS_CACHE_KEY);
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      if (Array.isArray(data) && data.length) return data;
+    }
+  } catch (e) {
+    console.warn('Album cache read failed:', e);
+  }
+  return null;
 }
 
 function hasLocation(album) {
@@ -562,6 +590,14 @@ function init() {
     }
   });
 
+  // Cache-then-network: paint the cached album list immediately (admin pages
+  // otherwise block ~6-8s on the slow Apps Script list call), then refresh in
+  // the background and swap in fresh data when it arrives.
+  const cachedAlbums = getCachedAlbums();
+  if (cachedAlbums) {
+    albums = cachedAlbums;
+    renderAlbumList();
+  }
   refresh();
 }
 

@@ -123,106 +123,44 @@ function doGet(e) {
 }
 
 /**
- * Lists all albums from the master "Family Trips" folder
- * Parses folder descriptions for metadata in format: "lat,lng | date | description"
- * Example: "31.7833,35.0000 | October 2025 | Hiking in the forest"
+ * Lists all albums from the master "Family Trips" folder.
+ * Parses folder descriptions for metadata in format:
+ *   "lat,lng | date | description | coverFileId | type"
+ *
+ * Performance: uses the advanced Drive service (Drive.Files.list, Drive API v3)
+ * so the whole listing is ~2 Drive calls total instead of ~2 per album. Old
+ * DriveApp code made one searchFiles() round-trip PER folder just to find a
+ * cover image, which made this 6-9s with a dozen+ albums.
+ *
+ * REQUIRES the "Drive API" advanced service enabled in the editor
+ * (Services → + → Drive API → v3). Without it, `Drive` is undefined and the
+ * call throws; the album list returns an { error } payload until it's enabled.
  */
 function listAlbums(masterId) {
   try {
-    const masterFolder = DriveApp.getFolderById(masterId);
-    const subfolders = masterFolder.getFolders();
+    // 1) One (paginated) call: every album subfolder WITH its description.
+    const folders = listChildFolders(masterId);
+
     const albums = [];
+    const foldersNeedingCover = []; // folderIds with no explicit cover stored
 
-    while (subfolders.hasNext()) {
-      const folder = subfolders.next();
-      const folderId = folder.getId();
-      const folderName = folder.getName();
-      const description = folder.getDescription() || '';
-
-      // Parse folder description: "lat,lng | date | description"
-      // If no description, use defaults
-      let lat = 31.7683; // Default to Jerusalem
-      let lng = 35.2137;
-      let date = '';
-      let albumDesc = '';
-      let coverId = '';
-      let type = 'travel';
-
-      if (description) {
-        // Format: "lat,lng | date | description | coverFileId | type" (last two optional)
-        const parts = description.split('|').map(p => p.trim());
-
-        // Parse coordinates from first part
-        if (parts[0]) {
-          const coords = parts[0].split(',').map(c => parseFloat(c.trim()));
-          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            lat = coords[0];
-            lng = coords[1];
-          }
-        }
-
-        // Parse date from second part
-        if (parts[1]) {
-          date = parts[1];
-        }
-
-        // Parse description from third part
-        if (parts[2]) {
-          albumDesc = parts[2];
-        }
-
-        // Parse explicit cover image file ID from fourth part
-        if (parts[3]) {
-          coverId = parts[3];
-        }
-
-        // Parse album type from fifth part ('event' or 'travel'); default travel
-        if (parts[4] && parts[4].toLowerCase() === 'event') {
-          type = 'event';
-        }
+    folders.forEach(folder => {
+      const album = parseAlbumFolder(folder.id, folder.name, folder.description || '');
+      albums.push(album);
+      if (!album.cover) {
+        foldersNeedingCover.push(folder.id);
       }
+    });
 
-      // Extract date from folder name if not in description
-      // Pattern: "Name Month Year" or "Name Mon YYYY"
-      if (!date) {
-        const dateMatch = folderName.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}/i);
-        if (dateMatch) {
-          date = dateMatch[0];
+    // 2) One (chunked/paginated) batched call: the cover image for every folder
+    //    that lacks an explicit one. Map each image back to its parent folder.
+    if (foldersNeedingCover.length) {
+      const coverByFolder = findFirstImagePerFolder(foldersNeedingCover);
+      albums.forEach(album => {
+        const imageId = coverByFolder[album.folderId];
+        if (!album.cover && imageId) {
+          album.cover = `https://lh3.googleusercontent.com/d/${imageId}=s2000`;
         }
-      }
-
-      // Generate album ID from folder name
-      const albumId = folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-      // Get cover image: use explicit cover ID if set, else first image in folder
-      let coverUrl = null;
-      try {
-        if (coverId) {
-          coverUrl = `https://lh3.googleusercontent.com/d/${coverId}=s2000`;
-        } else {
-          // Use searchFiles for faster filtering - only get first image file
-          const imageQuery = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
-          const imageFiles = DriveApp.searchFiles(imageQuery);
-          if (imageFiles.hasNext()) {
-            const firstImage = imageFiles.next();
-            coverUrl = `https://lh3.googleusercontent.com/d/${firstImage.getId()}=s2000`;
-          }
-        }
-      } catch (e) {
-        Logger.log('Error getting cover image: ' + e);
-        // Continue without cover
-      }
-
-      albums.push({
-        id: albumId,
-        title: folderName,
-        date: date,
-        description: albumDesc,
-        lat: lat,
-        lng: lng,
-        folderId: folderId,
-        cover: coverUrl,
-        type: type
       });
     }
 
@@ -235,6 +173,114 @@ function listAlbums(masterId) {
     }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * Fetch all non-trashed subfolders of a parent, with id/name/description, in as
+ * few Drive API calls as possible (1 call per 1000 folders).
+ */
+function listChildFolders(parentId) {
+  const out = [];
+  let pageToken = null;
+  do {
+    const resp = Drive.Files.list({
+      q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'nextPageToken, files(id, name, description)',
+      pageSize: 1000,
+      pageToken: pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
+    });
+    (resp.files || []).forEach(f => out.push(f));
+    pageToken = resp.nextPageToken;
+  } while (pageToken);
+  return out;
+}
+
+/**
+ * Given a list of folder IDs, return a map { folderId: firstImageFileId } using
+ * batched Drive queries (up to ~30 folders per query to keep the query string
+ * sane). "First" matches the old behavior: whichever image the API returns
+ * first for that folder.
+ */
+function findFirstImagePerFolder(folderIds) {
+  const coverByFolder = {};
+  const CHUNK = 30;
+  for (let i = 0; i < folderIds.length; i += CHUNK) {
+    const chunk = folderIds.slice(i, i + CHUNK);
+    const parentsClause = chunk.map(id => `'${id}' in parents`).join(' or ');
+    const q = `(${parentsClause}) and mimeType contains 'image/' and trashed = false`;
+    let pageToken = null;
+    do {
+      const resp = Drive.Files.list({
+        q: q,
+        fields: 'nextPageToken, files(id, parents)',
+        pageSize: 1000,
+        pageToken: pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
+      });
+      (resp.files || []).forEach(file => {
+        (file.parents || []).forEach(parentId => {
+          if (!coverByFolder[parentId]) coverByFolder[parentId] = file.id;
+        });
+      });
+      pageToken = resp.nextPageToken;
+    } while (pageToken);
+  }
+  return coverByFolder;
+}
+
+/**
+ * Turn one album folder's name + description into the album object the front end
+ * expects. `cover` is only set here when an explicit coverFileId is stored;
+ * otherwise it's left null for listAlbums() to fill in via a batched lookup.
+ */
+function parseAlbumFolder(folderId, folderName, description) {
+  // Parse folder description: "lat,lng | date | description | coverFileId | type"
+  // If no description, use defaults.
+  let lat = 31.7683; // Default to Jerusalem
+  let lng = 35.2137;
+  let date = '';
+  let albumDesc = '';
+  let coverId = '';
+  let type = 'travel';
+
+  if (description) {
+    const parts = description.split('|').map(p => p.trim());
+
+    // Coordinates (first part)
+    if (parts[0]) {
+      const coords = parts[0].split(',').map(c => parseFloat(c.trim()));
+      if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+        lat = coords[0];
+        lng = coords[1];
+      }
+    }
+
+    if (parts[1]) date = parts[1];                 // date (second part)
+    if (parts[2]) albumDesc = parts[2];            // description (third part)
+    if (parts[3]) coverId = parts[3];              // explicit cover file ID (fourth)
+    if (parts[4] && parts[4].toLowerCase() === 'event') type = 'event'; // type (fifth)
+  }
+
+  // Extract date from folder name if not in description ("Name Month Year").
+  if (!date) {
+    const dateMatch = folderName.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}/i);
+    if (dateMatch) date = dateMatch[0];
+  }
+
+  return {
+    id: folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    title: folderName,
+    date: date,
+    description: albumDesc,
+    lat: lat,
+    lng: lng,
+    folderId: folderId,
+    cover: coverId ? `https://lh3.googleusercontent.com/d/${coverId}=s2000` : null,
+    type: type
+  };
 }
 
 /**
