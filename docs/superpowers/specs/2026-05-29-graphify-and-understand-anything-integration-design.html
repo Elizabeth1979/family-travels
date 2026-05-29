@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design · Graphify + Understand-Anything</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #667eea;
+        --secondary: #f5576c;
+        --accent: #00f2fe;
+        --ink: #1a202c;
+        --ink-soft: #4a5568;
+        --ink-faint: #718096;
+        --paper: #fafbfd;
+        --card: #ffffff;
+        --border: #e2e8f0;
+        --rule: #edf2f7;
+        --code-bg: #f5f7fa;
+        --check: #38a169;
+        --warn: #d97706;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          sans-serif;
+        font-size: 16px;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 56px 28px 96px;
+      }
+
+      .eyebrow {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 14px;
+        letter-spacing: 0.18em;
+        color: var(--primary);
+        text-transform: uppercase;
+        margin: 0 0 18px;
+      }
+
+      h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(40px, 6vw, 64px);
+        line-height: 1.05;
+        letter-spacing: 0.01em;
+        margin: 0 0 18px;
+        color: var(--ink);
+      }
+
+      h1 .amp {
+        color: var(--secondary);
+        margin: 0 0.18em;
+      }
+
+      .lede {
+        font-size: 19px;
+        line-height: 1.55;
+        color: var(--ink-soft);
+        margin: 0 0 28px;
+        max-width: 70ch;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 12px;
+        margin: 0 0 40px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .meta li {
+        font-size: 13px;
+        color: var(--ink-soft);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 14px;
+      }
+
+      .meta li strong {
+        color: var(--ink);
+        font-weight: 600;
+        margin-right: 6px;
+      }
+
+      .meta .status {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: #fff;
+        border-color: transparent;
+      }
+
+      .meta .status strong {
+        color: #fff;
+      }
+
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 28px 30px;
+        margin: 0 0 22px;
+        box-shadow: 0 1px 0 rgba(102, 126, 234, 0.04),
+          0 8px 24px -16px rgba(26, 32, 44, 0.18);
+      }
+
+      section h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 28px;
+        letter-spacing: 0.04em;
+        margin: 0 0 6px;
+        color: var(--ink);
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+      }
+
+      section h2 .num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        letter-spacing: 0;
+        color: var(--primary);
+        font-weight: 500;
+      }
+
+      section .sub {
+        font-size: 14px;
+        color: var(--ink-faint);
+        margin: 0 0 18px;
+      }
+
+      p,
+      li {
+        color: var(--ink-soft);
+      }
+
+      ol,
+      ul {
+        padding-left: 22px;
+        margin: 12px 0;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      ol li::marker {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      ul li::marker {
+        color: var(--secondary);
+      }
+
+      code,
+      kbd {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+          monospace;
+        font-size: 0.9em;
+        background: var(--code-bg);
+        color: var(--ink);
+        padding: 1px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--rule);
+      }
+
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 16px 18px;
+        border-radius: 10px;
+        overflow-x: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 14px 0;
+      }
+
+      pre code {
+        background: none;
+        border: none;
+        padding: 0;
+        color: inherit;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0 4px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--rule);
+        vertical-align: top;
+      }
+
+      th {
+        font-weight: 600;
+        color: var(--ink);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: var(--code-bg);
+      }
+
+      td.yes {
+        color: var(--check);
+        font-weight: 600;
+      }
+
+      td.no {
+        color: var(--secondary);
+        font-weight: 600;
+      }
+
+      td.na {
+        color: var(--ink-faint);
+        font-style: italic;
+      }
+
+      .pill {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 3px 9px;
+        border-radius: 999px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      .pill.approved {
+        background: rgba(56, 161, 105, 0.12);
+        color: var(--check);
+      }
+
+      .callout {
+        border-left: 3px solid var(--primary);
+        background: rgba(102, 126, 234, 0.06);
+        border-radius: 0 8px 8px 0;
+        padding: 14px 18px;
+        margin: 16px 0;
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
+
+      .callout strong {
+        color: var(--ink);
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 14px;
+        align-items: start;
+        margin: 12px 0;
+      }
+
+      .step .marker {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 22px;
+        line-height: 32px;
+        text-align: center;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: #fff;
+        border-radius: 8px;
+        height: 32px;
+      }
+
+      .step .body {
+        padding-top: 2px;
+      }
+
+      .step .body h3 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--ink);
+        margin: 0 0 4px;
+      }
+
+      .step .body p {
+        margin: 0;
+        font-size: 14.5px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+        margin: 16px 0 4px;
+      }
+
+      .crit {
+        background: var(--code-bg);
+        border-radius: 10px;
+        padding: 14px 16px;
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+
+      .crit strong {
+        display: block;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--check);
+        margin-bottom: 4px;
+      }
+
+      footer {
+        margin-top: 36px;
+        padding-top: 24px;
+        border-top: 1px solid var(--rule);
+        font-size: 13px;
+        color: var(--ink-faint);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      footer a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 600px) {
+        .page {
+          padding: 32px 18px 64px;
+        }
+        section {
+          padding: 22px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <p class="eyebrow">Design Spec · 2026-05-29</p>
+      <h1>Graphify <span class="amp">+</span> Understand-Anything</h1>
+      <p class="lede">
+        Install both repos as Claude Code skills/plugins, run them against
+        <code>family-travels</code>, and write a short side-by-side note so we
+        know which to reach for next time.
+      </p>
+
+      <ul class="meta">
+        <li class="status"><strong>Status</strong>Approved · Variant A</li>
+        <li><strong>Owner</strong>Elizabeth</li>
+        <li><strong>Co-author</strong>Claude</li>
+        <li><strong>Repo</strong>family-travels</li>
+      </ul>
+
+      <section>
+        <h2><span class="num">01</span>Goal</h2>
+        <p>
+          Install
+          <a
+            href="https://github.com/safishamsi/graphify"
+            target="_blank"
+            rel="noopener"
+            >Graphify</a
+          >
+          and
+          <a
+            href="https://github.com/Lum1104/Understand-Anything"
+            target="_blank"
+            rel="noopener"
+            >Understand-Anything</a
+          >
+          as Claude Code skills/plugins, run both against the
+          <code>family-travels</code> repo, and produce a brief side-by-side
+          note on what each surfaces best.
+        </p>
+        <div class="callout">
+          <strong>Important framing:</strong> both tools transform a codebase
+          into an interactive knowledge graph for developer navigation. They
+          are dev-time aids only &mdash; neither is a runtime dependency of the
+          travel site itself.
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="num">02</span>Non-goals</h2>
+        <ul>
+          <li>
+            No new runtime feature in the travel site (no graph view inside the
+            album/map UI).
+          </li>
+          <li>No CI integration, no pre-commit hook to regenerate graphs.</li>
+          <li>
+            No Neo4j export, Obsidian vault wiring, or other extras either tool
+            ships.
+          </li>
+          <li>
+            No per-tool config tuning (LLM backend, model overrides) on first
+            pass &mdash; accept defaults; revisit only if results disappoint.
+          </li>
+          <li>
+            No commitment to keep both long-term. The comparison note exists
+            precisely to inform a future &ldquo;which one stays&rdquo;
+            decision.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2><span class="num">03</span>Constraints &amp; context</h2>
+        <ul>
+          <li>
+            Small static site (Vite + vanilla JS + some React for the 3D
+            gallery). Codebase fits comfortably in either tool's scope.
+          </li>
+          <li>
+            Owner is already running Claude Code with several plugins
+            installed. Plugin-based install is the smoothest path.
+          </li>
+          <li>
+            Owner does not want generated artifacts tracked in git &mdash; they
+            go stale fast and bloat the repo.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>
+          <span class="num">04</span>Plan
+          <span class="pill approved">Variant A</span>
+        </h2>
+        <p class="sub">Install &rarr; gitignore &rarr; run both &rarr; compare, all in one pass.</p>
+
+        <div class="step">
+          <div class="marker">1</div>
+          <div class="body">
+            <h3>Verify prerequisites</h3>
+            <p>
+              Confirm Python 3.10+ and that <code>/plugin marketplace add</code>
+              works for an arbitrary GitHub source. If either check fails,
+              surface the error rather than working around it.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="marker">2</div>
+          <div class="body">
+            <h3>Install Graphify</h3>
+            <pre><code>pip install graphifyy &amp;&amp; graphify install</code></pre>
+            <p>
+              Writes <code>~/.claude/skills/graphify/SKILL.md</code> and makes
+              <code>/graphify</code> available. User-scoped; no repo changes.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="marker">3</div>
+          <div class="body">
+            <h3>Install Understand-Anything</h3>
+            <pre><code>/plugin marketplace add Lum1104/Understand-Anything
+/plugin install understand-anything</code></pre>
+            <p>
+              Enables <code>/understand</code>,
+              <code>/understand-dashboard</code>, <code>/understand-chat</code>,
+              and <code>/understand-diff</code>. User-scoped.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="marker">4</div>
+          <div class="body">
+            <h3>Update <code>.gitignore</code></h3>
+            <pre><code>graphify-out/
+.understand-anything/</code></pre>
+            <p>The only change to the repo's source files.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="marker">5</div>
+          <div class="body">
+            <h3>Run Graphify</h3>
+            <p>
+              Invoke <code>/graphify .</code> at the repo root. Skim
+              <code>graphify-out/graph.html</code> and
+              <code>GRAPH_REPORT.md</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="marker">6</div>
+          <div class="body">
+            <h3>Run Understand-Anything</h3>
+            <p>
+              Invoke <code>/understand</code>. Skim
+              <code>.understand-anything/knowledge-graph.json</code> and, if
+              useful, open the dashboard via
+              <code>/understand-dashboard</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="marker">7</div>
+          <div class="body">
+            <h3>Write the comparison note</h3>
+            <p>
+              Save to
+              <code>docs/superpowers/notes/graphify-vs-understand-anything.md</code>
+              (~150&ndash;250 words). Cover: what each tool surfaced, where
+              each was more useful for this repo specifically, which to use
+              when, and any rough edges hit during install or run. Commit this
+              file.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="num">05</span>What gets committed</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Artifact</th>
+              <th>Committed?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>.gitignore</code> additions</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td>This design spec (md + html)</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td><code>docs/superpowers/notes/graphify-vs-understand-anything.md</code></td>
+              <td class="yes">Yes &mdash; authored prose</td>
+            </tr>
+            <tr>
+              <td><code>graphify-out/</code></td>
+              <td class="no">No &mdash; gitignored</td>
+            </tr>
+            <tr>
+              <td><code>.understand-anything/</code></td>
+              <td class="no">No &mdash; gitignored</td>
+            </tr>
+            <tr>
+              <td>Installed skills/plugins (in <code>~/.claude/</code>)</td>
+              <td class="na">N/A &mdash; lives in user's home</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2><span class="num">06</span>Error handling</h2>
+        <ul>
+          <li>
+            If <code>pip install graphifyy</code> fails on Python version:
+            stop, report the version found, do not auto-upgrade Python.
+          </li>
+          <li>
+            If <code>/plugin marketplace add Lum1104/Understand-Anything</code>
+            fails: report the error verbatim; no workaround retries.
+          </li>
+          <li>
+            If a tool runs but produces empty/broken output: capture the error
+            in the comparison note rather than masking it.
+          </li>
+          <li>
+            If LLM rate or token limits get hit mid-run: stop, note it, let the
+            owner decide whether to retry.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2><span class="num">07</span>Success criteria</h2>
+        <div class="grid-2">
+          <div class="crit">
+            <strong>01 · Skills live</strong>
+            Both <code>/graphify</code> and <code>/understand</code> are
+            invokable from this Claude Code session.
+          </div>
+          <div class="crit">
+            <strong>02 · Repo clean</strong>
+            <code>.gitignore</code> excludes both tools' output directories.
+          </div>
+          <div class="crit">
+            <strong>03 · Tools work</strong>
+            Both have produced non-empty output for <code>family-travels</code>
+            at least once.
+          </div>
+          <div class="crit">
+            <strong>04 · Decision-ready</strong>
+            The comparison note exists, is committed, and answers
+            &ldquo;which to use when&rdquo; concretely for this repo.
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>Source: <a
+            href="2026-05-29-graphify-and-understand-anything-integration-design.md"
+            >2026-05-29-graphify-and-understand-anything-integration-design.md</a
+          ></span>
+        <span>family-travels &middot; docs/superpowers/specs/</span>
+      </footer>
+    </main>
+  </body>
+</html>
