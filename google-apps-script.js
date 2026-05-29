@@ -9,10 +9,11 @@ const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 // Set to true to enable AI-generated alt text for images without descriptions
 const ENABLE_AI_ALT_TEXT = false;  // Disabled - enable after testing
 
-// Shared secret that gates all write actions (doPost). Set this to a long
-// random string and enter the SAME value in the admin page. Keep it private:
-// anyone with this token + the master folder ID can edit your albums.
-const ADMIN_TOKEN = "yolka";
+// Shared secret that gates all write actions (doPost). Stored in Script
+// Properties (Project Settings → Script Properties → ADMIN_TOKEN), NOT in this
+// file, so the secret never lands in source control. Enter the SAME value in
+// the admin page. Anyone with this token + the master folder ID can edit albums.
+const ADMIN_TOKEN = PropertiesService.getScriptProperties().getProperty('ADMIN_TOKEN');
 
 // Master folder used when creating brand-new albums from the admin page.
 const ADMIN_MASTER_FOLDER_ID = "1WMN1Y0Xa8tulV5zvP5tDawXz2uXCDxRL";
