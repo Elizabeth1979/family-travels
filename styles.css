@@ -29,6 +29,10 @@
     --bg-overlay: rgba(255, 255, 255, 0.15);
     --bg-overlay-blur: rgba(255, 255, 255, 0.2);
 
+    /* Form inputs & buttons (admin panel) */
+    --bg-input: #ffffff;
+    --bg-btn: #f3f4f6;
+
     /* Borders & UI */
     --border-color: #e2e8f0;
     --focus-color: #667eea;
@@ -58,6 +62,10 @@
         --bg-overlay: rgba(0, 0, 0, 0.3);
         --bg-overlay-blur: rgba(0, 0, 0, 0.2);
 
+        /* Form inputs & buttons (admin panel) */
+        --bg-input: #1a202c;
+        --bg-btn: #374151;
+
         /* Borders & UI */
         --border-color: #4a5568;
         --border-glass: rgba(255, 255, 255, 0.1);
@@ -85,6 +93,10 @@
     --bg-card-transparent: rgba(45, 55, 72, 0.95);
     --bg-overlay: rgba(0, 0, 0, 0.3);
     --bg-overlay-blur: rgba(0, 0, 0, 0.2);
+
+    /* Form inputs & buttons (admin panel) */
+    --bg-input: #1a202c;
+    --bg-btn: #374151;
 
     /* Borders & UI */
     --border-color: #4a5568;
@@ -124,6 +136,10 @@
     --bg-card-transparent: rgba(255, 255, 255, 0.95);
     --bg-overlay: rgba(255, 255, 255, 0.15);
     --bg-overlay-blur: rgba(255, 255, 255, 0.2);
+
+    /* Form inputs & buttons (admin panel) */
+    --bg-input: #ffffff;
+    --bg-btn: #f3f4f6;
 
     /* Borders & UI */
     --border-color: #e2e8f0;

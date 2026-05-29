@@ -376,7 +376,7 @@
   font: inherit;
   font-weight: 600;
   color: var(--text-main, #1a1a1a);
-  background: var(--bg-input, #f3f4f6);
+  background: var(--bg-btn, #f3f4f6);
   border: 1px solid var(--border-color, #cdcdcd);
   border-radius: 8px;
   cursor: pointer;
