@@ -321,6 +321,22 @@ header::before {
     background: rgba(255, 255, 255, 0.35);
 }
 
+/* Map page header controls: solid dark glass + white text/icon + light border
+   so they stay legible over the map's light tiles in any theme. Scoped to the
+   map page so the admin/album headers keep their own styling. */
+body:not(.admin-page):not(.album-page) .admin-link,
+body:not(.admin-page):not(.album-page) .theme-toggle {
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+body:not(.admin-page):not(.album-page) .admin-link:hover,
+body:not(.admin-page):not(.album-page) .theme-toggle:hover {
+    background: rgba(0, 0, 0, 0.65);
+}
+
 /* Globe/3D Gallery view - always dark background regardless of theme */
 .globe-view .theme-toggle {
     background: rgba(255, 255, 255, 0.3);
@@ -351,6 +367,19 @@ header h1 {
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
     margin: 0;
     text-transform: uppercase;
+}
+
+/* Map page title: white with a dark outline so it stays legible over both the
+   light (sea/tan) and dark areas of the map. Scoped to the map page (no body
+   class) so the admin and album headers keep their own styling. */
+body:not(.admin-page):not(.album-page) header h1 {
+    color: #fff;
+    text-shadow:
+        -1px -1px 0 rgba(0, 0, 0, 0.85),
+        1px -1px 0 rgba(0, 0, 0, 0.85),
+        -1px 1px 0 rgba(0, 0, 0, 0.85),
+        1px 1px 0 rgba(0, 0, 0, 0.85),
+        0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .map-intro {
