@@ -94,6 +94,18 @@ function renderAlbumList() {
       img.src = album.cover;
       img.alt = '';
       img.loading = 'lazy';
+      // A private/missing cover returns an HTML permission page, not an image.
+      // Swap in the empty placeholder instead of a broken-image icon. (Opening
+      // the album is what actually publishes it; the list never auto-shares.)
+      img.addEventListener(
+        'error',
+        () => {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'admin-album-thumb admin-album-thumb-empty';
+          img.replaceWith(placeholder);
+        },
+        { once: true }
+      );
       button.appendChild(img);
     } else {
       const placeholder = document.createElement('div');
@@ -168,9 +180,6 @@ function selectAlbum(album) {
   document.getElementById('save-btn').textContent = 'Save';
   document.getElementById('new-album-help').hidden = true;
   document.getElementById('cover-field').hidden = false;
-  document.getElementById('sharing-row').hidden = false;
-  document.getElementById('sharing-status').textContent =
-    'Use the button if family report they cannot open this album.';
 
   showEditor();
   initPinMap(lat, lng);
@@ -194,7 +203,6 @@ function startNewAlbum() {
   document.getElementById('save-btn').textContent = 'Create album';
   document.getElementById('new-album-help').hidden = true;
   document.getElementById('cover-field').hidden = true; // no photos yet
-  document.getElementById('sharing-row').hidden = true; // auto-shared on create
   document.getElementById('admin-cover-grid').innerHTML = '';
 
   showEditor();
@@ -461,7 +469,6 @@ async function handleSave() {
       document.getElementById('editor-heading').textContent = 'Edit album';
       document.getElementById('save-btn').textContent = 'Save';
       document.getElementById('cover-field').hidden = false;
-      document.getElementById('sharing-row').hidden = false;
       const help = document.getElementById('new-album-help');
       help.hidden = false;
       document.getElementById('open-drive-link').href =
@@ -488,17 +495,6 @@ async function handleSave() {
     setStatus('Error: ' + err.message, 'error');
   } finally {
     saveBtn.disabled = false;
-  }
-}
-
-async function handleMakePublic() {
-  if (!current) return;
-  try {
-    setStatus('Updating sharing…');
-    const result = await adminPost('setSharing', { folderId: current.folderId, public: true });
-    setStatus(`Album is public (${result.filesUpdated} photos updated).`, 'success');
-  } catch (err) {
-    setStatus('Error: ' + err.message, 'error');
   }
 }
 
@@ -537,7 +533,6 @@ function init() {
   document.getElementById('make-all-public-btn').addEventListener('click', handleMakeAllPublic);
   document.getElementById('new-album-btn').addEventListener('click', startNewAlbum);
   document.getElementById('save-btn').addEventListener('click', handleSave);
-  document.getElementById('make-public-btn').addEventListener('click', handleMakePublic);
   document.getElementById('cancel-btn').addEventListener('click', closeEditor);
   document.getElementById('back-to-list-btn').addEventListener('click', closeEditor);
   document.getElementById('edit-lat').addEventListener('change', syncMarkerFromInputs);
