@@ -28,3 +28,7 @@ backup/
 
 # Vercel
 .vercel/
+
+# Code-comprehension tools (Graphify, Understand-Anything) — generated artifacts
+graphify-out/
+.understand-anything/
