@@ -42,10 +42,23 @@ async function adminPost(action, params) {
   return data;
 }
 
+let statusTimer = null;
+
+// Show feedback as a floating toast and auto-hide it. Errors linger longer than
+// success/info so they're not missed.
 function setStatus(message, kind = 'info') {
   const el = document.getElementById('admin-status');
   el.textContent = message;
   el.dataset.kind = kind;
+  el.classList.toggle('is-visible', Boolean(message));
+
+  if (statusTimer) clearTimeout(statusTimer);
+  if (message) {
+    statusTimer = setTimeout(
+      () => el.classList.remove('is-visible'),
+      kind === 'error' ? 8000 : 4000
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
