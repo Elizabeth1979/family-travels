@@ -428,9 +428,11 @@ function renderLeafletMarkers() {
 
         attachMarkerBehavior(marker, ariaLabel);
 
-        // Single-album pins open the album on tap/click (the popup is a hover
-        // preview on desktop); without this, mobile needs two taps.
-        if (!isMulti) {
+        // Desktop (hover-capable) previews the album on hover, so a click on a
+        // single-album pin jumps straight in. Touch devices have no hover, so we
+        // must NOT navigate on tap — let the tap open the popup preview (with its
+        // "Open album" button), matching the keyboard (Enter) behavior.
+        if (!isMulti && window.matchMedia('(hover: hover)').matches) {
             const album = group.albums[0];
             marker.on('click', () => {
                 sessionStorage.setItem('currentAlbum', JSON.stringify(album));
