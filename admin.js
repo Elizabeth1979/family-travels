@@ -381,7 +381,10 @@ async function loadCoverChoices(folderId, { allowAutoShare = true } = {}) {
   // then re-render with a cache-bust so the now-public thumbnails load. The
   // re-render passes allowAutoShare:false so a still-broken tile can't loop.
   let handled = false;
-  const cacheBust = allowAutoShare ? '' : `&t=${Date.now()}`;
+  // Always cache-bust the thumbnail URL. Google's image CDN can serve a stale
+  // "public" copy of a now-private file, which would mask the failure and skip
+  // auto-publish. A fresh query string each load reflects the real sharing state.
+  const cacheBust = `&t=${Date.now()}`;
 
   images.forEach((item) => {
     const thumb = document.createElement('button');
