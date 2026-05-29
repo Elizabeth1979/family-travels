@@ -428,17 +428,10 @@ function renderLeafletMarkers() {
 
         attachMarkerBehavior(marker, ariaLabel);
 
-        // Desktop (hover-capable) previews the album on hover, so a click on a
-        // single-album pin jumps straight in. Touch devices have no hover, so we
-        // must NOT navigate on tap — let the tap open the popup preview (with its
-        // "Open album" button), matching the keyboard (Enter) behavior.
-        if (!isMulti && window.matchMedia('(hover: hover)').matches) {
-            const album = group.albums[0];
-            marker.on('click', () => {
-                sessionStorage.setItem('currentAlbum', JSON.stringify(album));
-                window.location.href = `album.html?id=${album.id}`;
-            });
-        }
+        // A pin only ever opens its popup preview — never navigates directly.
+        // Hover opens it (attachMarkerBehavior) and click opens it (Leaflet's
+        // built-in bindPopup handler), on both desktop and touch. Navigation to
+        // the album happens only via the "Open Album" button inside the popup.
 
         if (layer) {
             layer.addLayer(marker);
