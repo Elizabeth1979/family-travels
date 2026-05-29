@@ -329,54 +329,91 @@ async function handlePlaceSearch() {
   }
 }
 
-async function loadCoverChoices(folderId) {
+function showCoverNote(grid, message) {
+  const note = document.createElement('p');
+  note.className = 'admin-hint';
+  note.textContent = message;
+  grid.appendChild(note);
+}
+
+// Re-shares the folder and every file in it (videos included) as
+// "anyone with link" — the access the lh3/thumbnail image URLs require.
+async function ensureAlbumPublic(folderId) {
+  setStatus('Publishing photos…');
+  const result = await adminPost('setSharing', { folderId, public: true });
+  setStatus(`Published ${result.filesUpdated} photos.`, 'success');
+}
+
+async function loadCoverChoices(folderId, { allowAutoShare = true } = {}) {
   const grid = document.getElementById('admin-cover-grid');
   grid.innerHTML = '';
   if (!folderId) return;
 
+  let data;
   try {
     const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?folder=${folderId}&t=${Date.now()}`);
-    const data = await response.json();
-    const images = (data.items || []).filter(
-      (item) => item.size > 0 && item.mime && item.mime.startsWith('image/')
-    );
-
-    if (images.length === 0) {
-      const note = document.createElement('p');
-      note.className = 'admin-hint';
-      note.textContent = 'No photos in this folder yet.';
-      grid.appendChild(note);
-      return;
-    }
-
-    images.forEach((item) => {
-      const thumb = document.createElement('button');
-      thumb.type = 'button';
-      thumb.className = 'admin-cover-thumb';
-      thumb.dataset.id = item.id;
-      thumb.setAttribute('aria-label', 'Use this photo as cover');
-
-      const img = document.createElement('img');
-      img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w200`;
-      img.alt = item.description || '';
-      img.loading = 'lazy';
-      thumb.appendChild(img);
-
-      thumb.addEventListener('click', () => {
-        selectedCoverId = item.id;
-        grid.querySelectorAll('.admin-cover-thumb').forEach((t) =>
-          t.classList.toggle('selected', t.dataset.id === item.id)
-        );
-      });
-
-      grid.appendChild(thumb);
-    });
+    data = await response.json();
   } catch (err) {
-    const note = document.createElement('p');
-    note.className = 'admin-hint';
-    note.textContent = 'Could not load photos: ' + err.message;
-    grid.appendChild(note);
+    showCoverNote(grid, 'Could not load photos: ' + err.message);
+    return;
   }
+
+  const images = (data.items || []).filter(
+    (item) => item.size > 0 && item.mime && item.mime.startsWith('image/')
+  );
+
+  if (images.length === 0) {
+    showCoverNote(grid, 'No photos in this folder yet.');
+    return;
+  }
+
+  // A thumbnail that fails to load means the files are still private (Google
+  // returns an HTML permission page, not image bytes). `handled` guarantees a
+  // single reaction across all tiles: on the first failure we auto-share once,
+  // then re-render with a cache-bust so the now-public thumbnails load. The
+  // re-render passes allowAutoShare:false so a still-broken tile can't loop.
+  let handled = false;
+  const cacheBust = allowAutoShare ? '' : `&t=${Date.now()}`;
+
+  images.forEach((item) => {
+    const thumb = document.createElement('button');
+    thumb.type = 'button';
+    thumb.className = 'admin-cover-thumb';
+    thumb.dataset.id = item.id;
+    thumb.setAttribute('aria-label', 'Use this photo as cover');
+
+    const img = document.createElement('img');
+    img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w200${cacheBust}`;
+    img.alt = item.description || '';
+    img.loading = 'lazy';
+
+    img.addEventListener('error', async () => {
+      if (handled) return;
+      handled = true;
+      if (allowAutoShare) {
+        try {
+          await ensureAlbumPublic(folderId);
+          loadCoverChoices(folderId, { allowAutoShare: false });
+        } catch (err) {
+          setStatus('Error: ' + err.message, 'error');
+          showCoverNote(grid, 'Could not publish photos — check your token, then click Refresh.');
+        }
+      } else {
+        showCoverNote(grid, 'Some photos could not be shown. Click Refresh to try again.');
+      }
+    });
+
+    thumb.appendChild(img);
+
+    thumb.addEventListener('click', () => {
+      selectedCoverId = item.id;
+      grid.querySelectorAll('.admin-cover-thumb').forEach((t) =>
+        t.classList.toggle('selected', t.dataset.id === item.id)
+      );
+    });
+
+    grid.appendChild(thumb);
+  });
 }
 
 function readEditorFields() {
