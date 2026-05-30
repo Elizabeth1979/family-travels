@@ -381,8 +381,12 @@ function attachMarkerBehavior(marker, ariaLabel) {
         }
     };
 
-    // Keep the popup open while a mouse pointer is over the popup itself.
     marker.on('popupopen', function (e) {
+        // Only one popup open at a time. Leaflet's autoClose can miss on touch,
+        // so close every other marker's popup explicitly when this one opens.
+        markers.forEach((m) => { if (m !== marker) m.closePopup(); });
+
+        // Keep the popup open while a mouse pointer is over the popup itself.
         const popupEl = e.popup.getElement();
         if (popupEl) {
             popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
