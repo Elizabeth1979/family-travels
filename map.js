@@ -69,6 +69,12 @@ async function initMap() {
     // Update toggle UI to match preference
     updateToggleUI(currentMapType);
 
+    // Show a loading state for the 2D map too (the gallery has its own), so the
+    // first view isn't a blank default world map with no pins while data loads.
+    if (currentMapType === 'accessible') {
+        showLoading('Loading map…');
+    }
+
     try {
         if (currentMapType === 'gallery') {
             document.body.classList.add('gallery-view');
@@ -90,6 +96,7 @@ async function initMap() {
         populateAlbumList();
         if (currentMapType === 'accessible') {
             renderMarkers();
+            hideLoading(); // cached pins are on screen — drop the loading state
         } else if (currentMapType === 'gallery') {
             // Render gallery from cache immediately
             waitForGlobal('mountGallery').then(() => {
@@ -235,7 +242,9 @@ async function loadAlbumsAndMarkers() {
 }
 
 
-function renderMarkers() {
+// options.frame (default true): refit the view to show all pins. Set false when
+// re-rendering for reasons that shouldn't move the map (e.g. a theme change).
+function renderMarkers(options = {}) {
     if (!map) return;
 
     // Clear existing markers
@@ -245,7 +254,7 @@ function renderMarkers() {
         clusterGroup.clearLayers();
     }
 
-    renderLeafletMarkers();
+    renderLeafletMarkers(options);
 }
 
 // Group albums whose coordinates are within ~85m of each other into one place,
@@ -343,8 +352,20 @@ function createMultiAlbumPopup(albumsAtPlace) {
     return div;
 }
 
-// Hover-to-open popup + keyboard support, shared by single and grouped markers.
+// Hover-to-open popup (desktop mouse) + tap-to-open (touch) + keyboard support,
+// shared by single and grouped markers.
 function attachMarkerBehavior(marker, ariaLabel) {
+    // A tap on a touch screen used to fire a synthetic 'mouseover' (which opened
+    // the popup and panned the map) immediately followed by a 'click' (which
+    // toggled it back closed), so tapping a pin looked like it just scrolled the
+    // map without showing the preview. We must not key this off the device type
+    // (matchMedia('(hover: hover)') is unreliable — some phones report they can
+    // hover), so instead:
+    //   - tap / click opens the popup via Leaflet's built-in bindPopup handler,
+    //     on every device;
+    //   - the desktop hover preview is re-added with pointer events that act
+    //     only for an actual mouse (pointerType === 'mouse'), so touch input
+    //     never opens-then-closes the popup.
     let isOver = false;
     let closeTimeout = null;
 
@@ -360,16 +381,12 @@ function attachMarkerBehavior(marker, ariaLabel) {
         }
     };
 
-    marker.on('mouseover', function () {
-        isOver = true;
-        cancelClose();
-        this.openPopup();
-    });
-    marker.on('mouseout', function () {
-        isOver = false;
-        scheduleClose();
-    });
     marker.on('popupopen', function (e) {
+        // Only one popup open at a time. Leaflet's autoClose can miss on touch,
+        // so close every other marker's popup explicitly when this one opens.
+        markers.forEach((m) => { if (m !== marker) m.closePopup(); });
+
+        // Keep the popup open while a mouse pointer is over the popup itself.
         const popupEl = e.popup.getElement();
         if (popupEl) {
             popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
@@ -384,6 +401,21 @@ function attachMarkerBehavior(marker, ariaLabel) {
         el.setAttribute('tabindex', '0');
         el.setAttribute('role', 'button');
         el.setAttribute('aria-label', ariaLabel);
+
+        // Desktop hover preview only — ignored for touch and pen so a tap is
+        // left to Leaflet's click handler, which opens the popup cleanly.
+        el.addEventListener('pointerenter', (ev) => {
+            if (ev.pointerType !== 'mouse') return;
+            isOver = true;
+            cancelClose();
+            marker.openPopup();
+        });
+        el.addEventListener('pointerleave', (ev) => {
+            if (ev.pointerType !== 'mouse') return;
+            isOver = false;
+            scheduleClose();
+        });
+
         el.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
@@ -410,7 +442,7 @@ function createEventIcon() {
 }
 
 // Render markers for Leaflet, grouping repeat visits and clustering nearby pins
-function renderLeafletMarkers() {
+function renderLeafletMarkers(options = {}) {
     const useCluster = typeof L.markerClusterGroup === 'function';
 
     let layer = null;
@@ -439,14 +471,15 @@ function renderLeafletMarkers() {
             : `View ${group.albums[0].title} album`;
 
         const marker = L.marker([group.lat, group.lng], isEventGroup ? { icon: createEventIcon() } : undefined)
-            .bindPopup(popupContent, { autoClose: false, closeOnClick: false });
+            .bindPopup(popupContent, { autoClose: true, closeOnClick: false });
 
         attachMarkerBehavior(marker, ariaLabel);
 
         // A pin only ever opens its popup preview — never navigates directly.
-        // Hover opens it (attachMarkerBehavior) and click opens it (Leaflet's
-        // built-in bindPopup handler), on both desktop and touch. Navigation to
-        // the album happens only via the "Open Album" button inside the popup.
+        // Desktop hover opens it (attachMarkerBehavior); on both desktop and
+        // touch a click/tap opens it via Leaflet's built-in bindPopup handler.
+        // Navigation to the album happens only via the "Open Album" button (or a
+        // trip link) inside the popup.
 
         if (layer) {
             layer.addLayer(marker);
@@ -457,25 +490,24 @@ function renderLeafletMarkers() {
         markers.push(marker);
     });
 
-    // Open framed on the densest area (so a lone faraway pin doesn't force a
-    // zoomed-out, letterboxed world view). Users can still pinch-zoom out fully.
-    const focus = computeFocusBounds(groups);
-    if (focus && focus.isValid()) {
-        map.fitBounds(focus, { padding: [40, 40], maxZoom: 9 });
+    // Frame the view so every pin is visible on first load, so visitors always
+    // see where their places are and where to tap. Users can still zoom out to
+    // the whole world. Skipped when the caller asks not to move the map.
+    if (options.frame !== false) {
+        frameAllPins();
     }
 }
 
-// Pick the bounds of the largest group of nearby places to frame on load.
-function computeFocusBounds(groups) {
-    if (!groups || groups.length === 0) return null;
-    const RADIUS_M = 800000; // ~800 km: places this close count as one "area"
-    let bestCluster = [groups[0]];
-    groups.forEach(g => {
-        const here = L.latLng(g.lat, g.lng);
-        const cluster = groups.filter(o => here.distanceTo(L.latLng(o.lat, o.lng)) <= RADIUS_M);
-        if (cluster.length > bestCluster.length) bestCluster = cluster;
-    });
-    return L.latLngBounds(bestCluster.map(g => [g.lat, g.lng]));
+// Fit the map so all current pins are on screen. Recalculates the container size
+// first because on mobile the map can be laid out before its final size is known,
+// which would otherwise leave the view stuck on the default world position.
+function frameAllPins() {
+    if (!map || markers.length === 0) return;
+    map.invalidateSize();
+    const bounds = L.latLngBounds(markers.map(m => m.getLatLng()));
+    if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    }
 }
 
 // Create popup content with cover image and link
@@ -673,9 +705,10 @@ window.updateMapTheme = function (theme) {
     // Re-apply the zoom-based detail swap for the new overview layer.
     updateDetailLayer();
 
-    // Re-render markers to ensure they are on top
+    // Re-render markers to ensure they are on top, but keep the user's current
+    // view (a theme switch shouldn't re-frame and zoom the map around).
     if (albums.length > 0) {
-        renderMarkers();
+        renderMarkers({ frame: false });
     }
 };
 
