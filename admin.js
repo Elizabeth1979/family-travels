@@ -186,6 +186,21 @@ function renderAlbumList() {
 // Editor
 // ---------------------------------------------------------------------------
 
+// Point the persistent "Open folder in Drive" link at this album's folder and
+// reveal it. Shown for any existing album so the admin can always jump to Drive
+// to add or manage photos — not just on the screen right after creating it.
+function setDriveLink(folderId) {
+  const field = document.getElementById('open-drive-field');
+  const link = document.getElementById('open-drive-link-persistent');
+  if (folderId) {
+    link.href = `https://drive.google.com/drive/folders/${folderId}`;
+    field.hidden = false;
+  } else {
+    link.removeAttribute('href');
+    field.hidden = true;
+  }
+}
+
 function showEditor() {
   const editor = document.getElementById('admin-editor');
   editor.hidden = false;
@@ -221,6 +236,7 @@ function selectAlbum(album) {
   document.getElementById('save-btn').textContent = 'Save';
   document.getElementById('new-album-help').hidden = true;
   document.getElementById('cover-field').hidden = false;
+  setDriveLink(album.folderId);
 
   showEditor();
   initPinMap(lat, lng);
@@ -245,6 +261,7 @@ function startNewAlbum() {
   document.getElementById('new-album-help').hidden = true;
   document.getElementById('cover-field').hidden = true; // no photos yet
   document.getElementById('admin-cover-grid').innerHTML = '';
+  setDriveLink(''); // no folder until the album is created
 
   showEditor();
   initPinMap(20, 0, 2);
@@ -520,6 +537,7 @@ async function handleSave() {
       help.hidden = false;
       document.getElementById('open-drive-link').href =
         `https://drive.google.com/drive/folders/${result.folderId}`;
+      setDriveLink(result.folderId);
     } else {
       setStatus('Saving…');
       if (current && fields.title !== current.title) {
