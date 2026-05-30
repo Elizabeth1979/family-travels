@@ -467,7 +467,7 @@ function renderLeafletMarkers(options = {}) {
             : `View ${group.albums[0].title} album`;
 
         const marker = L.marker([group.lat, group.lng], isEventGroup ? { icon: createEventIcon() } : undefined)
-            .bindPopup(popupContent, { autoClose: false, closeOnClick: false });
+            .bindPopup(popupContent, { autoClose: true, closeOnClick: false });
 
         attachMarkerBehavior(marker, ariaLabel);
 
