@@ -343,17 +343,20 @@ function createMultiAlbumPopup(albumsAtPlace) {
     return div;
 }
 
-// Hover-to-open popup (desktop) + tap-to-open (touch) + keyboard support,
+// Hover-to-open popup (desktop mouse) + tap-to-open (touch) + keyboard support,
 // shared by single and grouped markers.
 function attachMarkerBehavior(marker, ariaLabel) {
-    // Hover-to-open is only wired up on devices that actually hover (desktop
-    // mice). On a touch screen a single tap fires a synthetic mouseover *and* a
-    // click: the mouseover opened the popup (panning the map) and the click then
-    // toggled it straight back closed — so a tap looked like it just scrolled the
-    // map without showing the preview. On touch we leave opening to Leaflet's
-    // built-in click handler, which opens the popup cleanly on tap.
-    const canHover = window.matchMedia('(hover: hover)').matches;
-
+    // A tap on a touch screen used to fire a synthetic 'mouseover' (which opened
+    // the popup and panned the map) immediately followed by a 'click' (which
+    // toggled it back closed), so tapping a pin looked like it just scrolled the
+    // map without showing the preview. We must not key this off the device type
+    // (matchMedia('(hover: hover)') is unreliable — some phones report they can
+    // hover), so instead:
+    //   - tap / click opens the popup via Leaflet's built-in bindPopup handler,
+    //     on every device;
+    //   - the desktop hover preview is re-added with pointer events that act
+    //     only for an actual mouse (pointerType === 'mouse'), so touch input
+    //     never opens-then-closes the popup.
     let isOver = false;
     let closeTimeout = null;
 
@@ -369,24 +372,14 @@ function attachMarkerBehavior(marker, ariaLabel) {
         }
     };
 
-    if (canHover) {
-        marker.on('mouseover', function () {
-            isOver = true;
-            cancelClose();
-            this.openPopup();
-        });
-        marker.on('mouseout', function () {
-            isOver = false;
-            scheduleClose();
-        });
-        marker.on('popupopen', function (e) {
-            const popupEl = e.popup.getElement();
-            if (popupEl) {
-                popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
-                popupEl.addEventListener('mouseleave', () => { isOver = false; scheduleClose(); });
-            }
-        });
-    }
+    // Keep the popup open while a mouse pointer is over the popup itself.
+    marker.on('popupopen', function (e) {
+        const popupEl = e.popup.getElement();
+        if (popupEl) {
+            popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
+            popupEl.addEventListener('mouseleave', () => { isOver = false; scheduleClose(); });
+        }
+    });
 
     // Marker DOM element only exists once it is actually placed (not in a cluster)
     marker.on('add', () => {
@@ -395,6 +388,21 @@ function attachMarkerBehavior(marker, ariaLabel) {
         el.setAttribute('tabindex', '0');
         el.setAttribute('role', 'button');
         el.setAttribute('aria-label', ariaLabel);
+
+        // Desktop hover preview only — ignored for touch and pen so a tap is
+        // left to Leaflet's click handler, which opens the popup cleanly.
+        el.addEventListener('pointerenter', (ev) => {
+            if (ev.pointerType !== 'mouse') return;
+            isOver = true;
+            cancelClose();
+            marker.openPopup();
+        });
+        el.addEventListener('pointerleave', (ev) => {
+            if (ev.pointerType !== 'mouse') return;
+            isOver = false;
+            scheduleClose();
+        });
+
         el.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
