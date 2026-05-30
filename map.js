@@ -14,6 +14,11 @@ let map;
 let albums = [];
 let markers = [];
 let clusterGroup = null;
+// True once the view has been auto-framed to fit all pins. We only auto-frame
+// the first time pins render (and on a deliberate filter change), never on later
+// re-renders — otherwise a background data refresh would yank the map back out
+// to "fit all" after the user has zoomed in.
+let hasFramed = false;
 
 // Tile layers for the zoom-based detail swap (see setupZoomDetailSwap). The
 // NatGeo overview map the owner likes has no street-level tiles, so once the
@@ -144,6 +149,7 @@ async function initLeafletMap() {
     });
 
     map = L.map('map', options);
+    hasFramed = false; // a freshly created map should frame its pins once
 
     // Get configured layers. Kept at module scope so the theme toggle and the
     // zoom-based detail swap reuse the same tile-layer instances.
@@ -490,11 +496,14 @@ function renderLeafletMarkers(options = {}) {
         markers.push(marker);
     });
 
-    // Frame the view so every pin is visible on first load, so visitors always
-    // see where their places are and where to tap. Users can still zoom out to
-    // the whole world. Skipped when the caller asks not to move the map.
-    if (options.frame !== false) {
+    // Frame the view so every pin is visible — but only the first time pins
+    // render (so visitors see where to tap), or when a filter deliberately
+    // changes the set (options.forceFrame). We must NOT re-frame on every render,
+    // or a background data refresh would zoom the map back out after the user has
+    // zoomed in. options.frame === false skips framing entirely (e.g. theme swap).
+    if (options.frame !== false && (options.forceFrame || !hasFramed)) {
         frameAllPins();
+        hasFramed = true;
     }
 }
 
@@ -896,7 +905,8 @@ function applyAlbumFilter() {
             window.mountGallery('map', getFilteredAlbums());
         }
     } else {
-        renderMarkers();
+        // A filter change is a deliberate action, so re-frame to the new set.
+        renderMarkers({ forceFrame: true });
     }
 }
 
