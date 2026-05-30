@@ -265,7 +265,10 @@ function initPinMap(lat, lng, zoom = 10) {
         zoom,
         zoomControl: true,
       }));
-      createTileLayer('light').addTo(pinMap);
+      // Use OpenStreetMap for the picker so roads are visible at every zoom.
+      // (The NatGeo overview the public map uses has no street-level tiles and
+      // shows "Map data not yet available" when you zoom in to place a pin.)
+      createTileLayer('osm').addTo(pinMap);
 
       pinMarker = L.marker([lat, lng], { draggable: true }).addTo(pinMap);
       pinMarker.on('dragend', () => {
