@@ -40,7 +40,23 @@ function doGet(e) {
         }))
           .setMimeType(ContentService.MimeType.JSON);
       }
-      return listAlbums(masterId);
+      // all=1 includes unlisted albums (used by the admin page). Public callers
+      // omit it, so unlisted albums never appear in the public list.
+      return listAlbums(masterId, e.parameter.all === '1');
+    }
+
+    // Get a single album by its slug id, including unlisted albums, so a shared
+    // direct link keeps working even though the album is hidden from the list.
+    if (action === 'album') {
+      const masterId = e.parameter.master;
+      const albumId = e.parameter.id;
+      if (!masterId || !albumId) {
+        return ContentService.createTextOutput(JSON.stringify({
+          error: 'master and id are required'
+        }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      return getAlbumById(masterId, albumId);
     }
 
     // Get photos from specific folder (existing functionality)
@@ -136,7 +152,7 @@ function doGet(e) {
  * (Services → + → Drive API → v3). Without it, `Drive` is undefined and the
  * call throws; the album list returns an { error } payload until it's enabled.
  */
-function listAlbums(masterId) {
+function listAlbums(masterId, includeUnlisted) {
   try {
     // 1) One (paginated) call: every album subfolder WITH its description.
     const folders = listChildFolders(masterId);
@@ -146,6 +162,9 @@ function listAlbums(masterId) {
 
     folders.forEach(folder => {
       const album = parseAlbumFolder(folder.id, folder.name, folder.description || '');
+      // Unlisted albums are hidden from the public list; they stay reachable by
+      // direct link via getAlbumById(). The admin page passes all=1 to see them.
+      if (album.unlisted && !includeUnlisted) return;
       albums.push(album);
       if (!album.cover) {
         foldersNeedingCover.push(folder.id);
@@ -165,6 +184,48 @@ function listAlbums(masterId) {
     }
 
     return ContentService.createTextOutput(JSON.stringify(albums))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: error.toString()
+    }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Finds one album by its slug id, scanning all child folders so unlisted albums
+ * are included. Resolves the cover image if there's no explicit one, mirroring
+ * listAlbums(). Returns the album object, or an { error } payload if not found.
+ */
+function getAlbumById(masterId, id) {
+  try {
+    const folders = listChildFolders(masterId);
+    let match = null;
+    for (let i = 0; i < folders.length; i++) {
+      const folder = folders[i];
+      const album = parseAlbumFolder(folder.id, folder.name, folder.description || '');
+      if (album.id === id) {
+        match = album;
+        break;
+      }
+    }
+
+    if (!match) {
+      return ContentService.createTextOutput(JSON.stringify({ error: 'Album not found' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!match.cover) {
+      const coverByFolder = findFirstImagePerFolder([match.folderId]);
+      const imageId = coverByFolder[match.folderId];
+      if (imageId) {
+        match.cover = `https://lh3.googleusercontent.com/d/${imageId}=s2000`;
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify(match))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
@@ -245,9 +306,16 @@ function parseAlbumFolder(folderId, folderName, description) {
   let albumDesc = '';
   let coverId = '';
   let type = 'travel';
+  let unlisted = false;
 
   if (description) {
-    const parts = description.split('|').map(p => p.trim());
+    let parts = description.split('|').map(p => p.trim());
+
+    // Flag tokens (e.g. "#unlisted") may sit anywhere in the description. Pull
+    // them out before positional parsing so they never shift the
+    // lat/date/description/cover/type slots below.
+    unlisted = parts.some(p => p.toLowerCase() === '#unlisted');
+    parts = parts.filter(p => p.toLowerCase() !== '#unlisted');
 
     // Coordinates (first part)
     if (parts[0]) {
@@ -279,7 +347,8 @@ function parseAlbumFolder(folderId, folderName, description) {
     lng: lng,
     folderId: folderId,
     cover: coverId ? `https://lh3.googleusercontent.com/d/${coverId}=s2000` : null,
-    type: type
+    type: type,
+    unlisted: unlisted
   };
 }
 
@@ -396,7 +465,7 @@ function doPost(e) {
 // Build the folder-description metadata string from individual fields:
 // "lat,lng | date | description | coverFileId | type" (coords/cover optional; type
 // defaults to travel and is only written for events).
-function buildMetaDescription(lat, lng, date, description, coverId, type) {
+function buildMetaDescription(lat, lng, date, description, coverId, type, unlisted) {
   const hasCoords = lat !== '' && lat != null && lng !== '' && lng != null;
   const coords = hasCoords ? `${lat},${lng}` : '';
   const parts = [coords, date || '', description || ''];
@@ -404,13 +473,15 @@ function buildMetaDescription(lat, lng, date, description, coverId, type) {
   // coverId is slot 4 and type is slot 5; keep slot 4 present (even empty) when type is set.
   if (coverId || isEvent) parts.push(coverId || '');
   if (isEvent) parts.push('event');
+  // Visibility flag is a free-floating token, parsed by value (not position).
+  if (unlisted === true || unlisted === 'true') parts.push('#unlisted');
   return parts.join(' | ');
 }
 
 function adminSetMeta(body) {
   const folder = DriveApp.getFolderById(body.folderId);
   folder.setDescription(
-    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId, body.type)
+    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId, body.type, body.unlisted)
   );
   return jsonResponse({ ok: true, folderId: body.folderId });
 }
@@ -453,7 +524,7 @@ function adminCreateAlbum(body) {
 
   const folder = master.createFolder(title);
   folder.setDescription(
-    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId, body.type)
+    buildMetaDescription(body.lat, body.lng, body.date, body.description, body.coverId, body.type, body.unlisted)
   );
   folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
