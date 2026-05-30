@@ -265,7 +265,29 @@ function initPinMap(lat, lng, zoom = 10) {
         zoom,
         zoomControl: true,
       }));
-      createTileLayer('light').addTo(pinMap);
+      // Match the main map: show the NatGeo overview when zoomed out, then hand
+      // off to OpenStreetMap streets once zoomed in (NatGeo has no street-level
+      // tiles), so you can see roads while placing the pin.
+      const overviewTiles = createTileLayer('light');
+      const detailTiles = createTileLayer('osm');
+      const DETAIL_ZOOM = 14;
+      let detailOn = false;
+      overviewTiles.addTo(pinMap);
+
+      const updatePinDetail = () => {
+        const wantDetail = pinMap.getZoom() >= DETAIL_ZOOM;
+        if (wantDetail && !detailOn) {
+          detailTiles.addTo(pinMap);          // add streets first to avoid a grey flash
+          pinMap.removeLayer(overviewTiles);
+          detailOn = true;
+        } else if (!wantDetail && detailOn) {
+          overviewTiles.addTo(pinMap);
+          pinMap.removeLayer(detailTiles);
+          detailOn = false;
+        }
+      };
+      pinMap.on('zoomend', updatePinDetail);
+      updatePinDetail();
 
       pinMarker = L.marker([lat, lng], { draggable: true }).addTo(pinMap);
       pinMarker.on('dragend', () => {
