@@ -343,8 +343,17 @@ function createMultiAlbumPopup(albumsAtPlace) {
     return div;
 }
 
-// Hover-to-open popup + keyboard support, shared by single and grouped markers.
+// Hover-to-open popup (desktop) + tap-to-open (touch) + keyboard support,
+// shared by single and grouped markers.
 function attachMarkerBehavior(marker, ariaLabel) {
+    // Hover-to-open is only wired up on devices that actually hover (desktop
+    // mice). On a touch screen a single tap fires a synthetic mouseover *and* a
+    // click: the mouseover opened the popup (panning the map) and the click then
+    // toggled it straight back closed — so a tap looked like it just scrolled the
+    // map without showing the preview. On touch we leave opening to Leaflet's
+    // built-in click handler, which opens the popup cleanly on tap.
+    const canHover = window.matchMedia('(hover: hover)').matches;
+
     let isOver = false;
     let closeTimeout = null;
 
@@ -360,22 +369,24 @@ function attachMarkerBehavior(marker, ariaLabel) {
         }
     };
 
-    marker.on('mouseover', function () {
-        isOver = true;
-        cancelClose();
-        this.openPopup();
-    });
-    marker.on('mouseout', function () {
-        isOver = false;
-        scheduleClose();
-    });
-    marker.on('popupopen', function (e) {
-        const popupEl = e.popup.getElement();
-        if (popupEl) {
-            popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
-            popupEl.addEventListener('mouseleave', () => { isOver = false; scheduleClose(); });
-        }
-    });
+    if (canHover) {
+        marker.on('mouseover', function () {
+            isOver = true;
+            cancelClose();
+            this.openPopup();
+        });
+        marker.on('mouseout', function () {
+            isOver = false;
+            scheduleClose();
+        });
+        marker.on('popupopen', function (e) {
+            const popupEl = e.popup.getElement();
+            if (popupEl) {
+                popupEl.addEventListener('mouseenter', () => { isOver = true; cancelClose(); });
+                popupEl.addEventListener('mouseleave', () => { isOver = false; scheduleClose(); });
+            }
+        });
+    }
 
     // Marker DOM element only exists once it is actually placed (not in a cluster)
     marker.on('add', () => {
@@ -444,9 +455,10 @@ function renderLeafletMarkers() {
         attachMarkerBehavior(marker, ariaLabel);
 
         // A pin only ever opens its popup preview — never navigates directly.
-        // Hover opens it (attachMarkerBehavior) and click opens it (Leaflet's
-        // built-in bindPopup handler), on both desktop and touch. Navigation to
-        // the album happens only via the "Open Album" button inside the popup.
+        // Desktop hover opens it (attachMarkerBehavior); on both desktop and
+        // touch a click/tap opens it via Leaflet's built-in bindPopup handler.
+        // Navigation to the album happens only via the "Open Album" button (or a
+        // trip link) inside the popup.
 
         if (layer) {
             layer.addLayer(marker);
