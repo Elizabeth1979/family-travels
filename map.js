@@ -69,6 +69,12 @@ async function initMap() {
     // Update toggle UI to match preference
     updateToggleUI(currentMapType);
 
+    // Show a loading state for the 2D map too (the gallery has its own), so the
+    // first view isn't a blank default world map with no pins while data loads.
+    if (currentMapType === 'accessible') {
+        showLoading('Loading map…');
+    }
+
     try {
         if (currentMapType === 'gallery') {
             document.body.classList.add('gallery-view');
@@ -90,6 +96,7 @@ async function initMap() {
         populateAlbumList();
         if (currentMapType === 'accessible') {
             renderMarkers();
+            hideLoading(); // cached pins are on screen — drop the loading state
         } else if (currentMapType === 'gallery') {
             // Render gallery from cache immediately
             waitForGlobal('mountGallery').then(() => {
@@ -235,7 +242,9 @@ async function loadAlbumsAndMarkers() {
 }
 
 
-function renderMarkers() {
+// options.frame (default true): refit the view to show all pins. Set false when
+// re-rendering for reasons that shouldn't move the map (e.g. a theme change).
+function renderMarkers(options = {}) {
     if (!map) return;
 
     // Clear existing markers
@@ -245,7 +254,7 @@ function renderMarkers() {
         clusterGroup.clearLayers();
     }
 
-    renderLeafletMarkers();
+    renderLeafletMarkers(options);
 }
 
 // Group albums whose coordinates are within ~85m of each other into one place,
@@ -429,7 +438,7 @@ function createEventIcon() {
 }
 
 // Render markers for Leaflet, grouping repeat visits and clustering nearby pins
-function renderLeafletMarkers() {
+function renderLeafletMarkers(options = {}) {
     const useCluster = typeof L.markerClusterGroup === 'function';
 
     let layer = null;
@@ -477,25 +486,24 @@ function renderLeafletMarkers() {
         markers.push(marker);
     });
 
-    // Open framed on the densest area (so a lone faraway pin doesn't force a
-    // zoomed-out, letterboxed world view). Users can still pinch-zoom out fully.
-    const focus = computeFocusBounds(groups);
-    if (focus && focus.isValid()) {
-        map.fitBounds(focus, { padding: [40, 40], maxZoom: 9 });
+    // Frame the view so every pin is visible on first load, so visitors always
+    // see where their places are and where to tap. Users can still zoom out to
+    // the whole world. Skipped when the caller asks not to move the map.
+    if (options.frame !== false) {
+        frameAllPins();
     }
 }
 
-// Pick the bounds of the largest group of nearby places to frame on load.
-function computeFocusBounds(groups) {
-    if (!groups || groups.length === 0) return null;
-    const RADIUS_M = 800000; // ~800 km: places this close count as one "area"
-    let bestCluster = [groups[0]];
-    groups.forEach(g => {
-        const here = L.latLng(g.lat, g.lng);
-        const cluster = groups.filter(o => here.distanceTo(L.latLng(o.lat, o.lng)) <= RADIUS_M);
-        if (cluster.length > bestCluster.length) bestCluster = cluster;
-    });
-    return L.latLngBounds(bestCluster.map(g => [g.lat, g.lng]));
+// Fit the map so all current pins are on screen. Recalculates the container size
+// first because on mobile the map can be laid out before its final size is known,
+// which would otherwise leave the view stuck on the default world position.
+function frameAllPins() {
+    if (!map || markers.length === 0) return;
+    map.invalidateSize();
+    const bounds = L.latLngBounds(markers.map(m => m.getLatLng()));
+    if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    }
 }
 
 // Create popup content with cover image and link
@@ -693,9 +701,10 @@ window.updateMapTheme = function (theme) {
     // Re-apply the zoom-based detail swap for the new overview layer.
     updateDetailLayer();
 
-    // Re-render markers to ensure they are on top
+    // Re-render markers to ensure they are on top, but keep the user's current
+    // view (a theme switch shouldn't re-frame and zoom the map around).
     if (albums.length > 0) {
-        renderMarkers();
+        renderMarkers({ frame: false });
     }
 };
 
