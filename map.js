@@ -14,6 +14,16 @@ let map;
 let albums = [];
 let markers = [];
 let clusterGroup = null;
+
+// Tile layers for the zoom-based detail swap (see setupZoomDetailSwap). The
+// NatGeo overview map the owner likes has no street-level tiles, so once the
+// user zooms in we hand off to OpenStreetMap and swap back when they zoom out.
+let baseMaps = null;            // themed overview base layers, shared with the theme toggle
+let overviewLayer = null;       // overview layer shown when zoomed out (NatGeo in light mode)
+let detailLayer = null;         // OpenStreetMap street layer shown when zoomed in
+let detailActive = false;       // true while the OSM detail layer is showing
+let manualBaseOverride = false; // user picked a base map from the top-right layer control
+const DETAIL_ZOOM = 14;         // map zoom at/after which we hand off to the street map
 let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
 let currentFilter = 'all'; // 'all' | 'travel' | 'event'
 
@@ -128,21 +138,26 @@ async function initLeafletMap() {
 
     map = L.map('map', options);
 
-    // Get configured layers
-    const { baseMaps, overlayMaps } = getLeafletLayers();
+    // Get configured layers. Kept at module scope so the theme toggle and the
+    // zoom-based detail swap reuse the same tile-layer instances.
+    const layers = getLeafletLayers();
+    baseMaps = layers.baseMaps;
 
     // Add Layer Control
-    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+    L.control.layers(baseMaps, layers.overlayMaps, { position: 'topright' }).addTo(map);
 
-    // Determine initial layers based on theme
+    // Determine initial overview layer based on theme
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    const initialBaseLayer = currentTheme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
+    overviewLayer = currentTheme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
 
     // Add base layer
-    initialBaseLayer.addTo(map);
+    overviewLayer.addTo(map);
 
     // Add zoom control (topleft, will be pushed down by CSS)
     L.control.zoom({ position: 'topleft' }).addTo(map);
+
+    // Hand off to OpenStreetMap when zoomed in past where NatGeo runs out.
+    setupZoomDetailSwap();
 
     console.log('Leaflet map initialized successfully');
 
@@ -570,25 +585,93 @@ function initMenuToggle() {
 }
 
 
+// Swap the NatGeo overview map for OpenStreetMap when the user zooms in past
+// where NatGeo runs out of tiles, and swap back when they zoom out. This reacts
+// to *map* zoom (the +/- buttons, scroll, pinch), not browser page zoom. Only
+// the light/NatGeo overview needs it; dark mode already uses satellite imagery
+// that has detail at high zoom.
+function setupZoomDetailSwap() {
+    // OSM street layer, created once and reused.
+    detailLayer = L.tileLayer(MAP_PROVIDERS.osm.url, MAP_PROVIDERS.osm.options);
+
+    map.on('zoomend', updateDetailLayer);
+
+    // If the user picks a base map from the top-right layer control, respect it
+    // and pause auto-swapping. Choosing the themed default again re-enables it.
+    map.on('baselayerchange', (e) => {
+        overviewLayer = e.layer;
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+        const themedDefault = theme === 'dark'
+            ? baseMaps[MAP_PROVIDERS.dark.name]
+            : baseMaps[MAP_PROVIDERS.light.name];
+        manualBaseOverride = e.layer !== themedDefault;
+
+        if (manualBaseOverride) {
+            // Get OSM out of the way so the user's chosen base map shows.
+            if (detailActive) {
+                map.removeLayer(detailLayer);
+                detailActive = false;
+            }
+        } else {
+            updateDetailLayer();
+        }
+    });
+
+    updateDetailLayer();
+}
+
+// Decide whether the OSM detail layer or the overview layer should be showing,
+// based on the current zoom. No-op while the user has a manual base map chosen.
+function updateDetailLayer() {
+    if (!map || !detailLayer || manualBaseOverride) return;
+
+    // Only the NatGeo overview lacks street tiles. If a different overview is
+    // active (e.g. dark-mode satellite), make sure we're not stuck on detail.
+    const overviewIsNatGeo = overviewLayer === baseMaps[MAP_PROVIDERS.light.name];
+    if (!overviewIsNatGeo) {
+        if (detailActive) deactivateDetail();
+        return;
+    }
+
+    const wantDetail = map.getZoom() >= DETAIL_ZOOM;
+    if (wantDetail && !detailActive) {
+        activateDetail();
+    } else if (!wantDetail && detailActive) {
+        deactivateDetail();
+    }
+}
+
+function activateDetail() {
+    detailLayer.addTo(map);        // add OSM first so there's no grey flash
+    map.removeLayer(overviewLayer);
+    detailActive = true;
+}
+
+function deactivateDetail() {
+    overviewLayer.addTo(map);
+    map.removeLayer(detailLayer);
+    detailActive = false;
+}
+
 // Update map theme dynamically
 window.updateMapTheme = function (theme) {
     console.log('Updating map theme to:', theme);
 
-    if (!map || typeof L === 'undefined') return;
+    if (!map || typeof L === 'undefined' || !baseMaps) return;
 
-    // Get layers
-    const { baseMaps } = getLeafletLayers();
+    // Remove whatever base/detail tiles are currently showing (leave any
+    // user-enabled overlay like place labels alone).
+    if (overviewLayer && map.hasLayer(overviewLayer)) map.removeLayer(overviewLayer);
+    if (detailLayer && map.hasLayer(detailLayer)) map.removeLayer(detailLayer);
+    detailActive = false;
 
-    // Remove all current tile layers
-    map.eachLayer((layer) => {
-        if (layer instanceof L.TileLayer) {
-            map.removeLayer(layer);
-        }
-    });
+    // A theme switch resets any manual base-map choice back to the themed default.
+    manualBaseOverride = false;
+    overviewLayer = theme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
+    overviewLayer.addTo(map);
 
-    // Add the theme-appropriate base layer
-    const newBaseLayer = theme === 'dark' ? baseMaps[MAP_PROVIDERS.dark.name] : baseMaps[MAP_PROVIDERS.light.name];
-    newBaseLayer.addTo(map);
+    // Re-apply the zoom-based detail swap for the new overview layer.
+    updateDetailLayer();
 
     // Re-render markers to ensure they are on top
     if (albums.length > 0) {

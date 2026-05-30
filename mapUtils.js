@@ -36,6 +36,18 @@ export const MAP_PROVIDERS = {
       maxZoom: 18
     }
   },
+  // Street-level detail (OpenStreetMap). The NatGeo overview map has no
+  // street-level tiles, so we swap to this once the user zooms in past where
+  // NatGeo runs out (see setupZoomDetailSwap in map.js). Free, no API key.
+  osm: {
+    id: 'osm',
+    name: 'OpenStreetMap',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }
+  },
   // Overlay: Place Labels
   labels: {
     id: 'esri_labels',
