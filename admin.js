@@ -619,6 +619,17 @@ function init() {
   document.getElementById('edit-lat').addEventListener('change', syncMarkerFromInputs);
   document.getElementById('edit-lng').addEventListener('change', syncMarkerFromInputs);
 
+  // The "?" next to the Unlisted checkbox toggles a fuller explanation. The
+  // button also has a native title= tooltip for quick hover hints on desktop;
+  // the toggle is the reliable path on touch devices where hover doesn't exist.
+  const unlistedInfo = document.getElementById('unlisted-info');
+  if (unlistedInfo) {
+    unlistedInfo.addEventListener('click', () => {
+      const help = document.getElementById('unlisted-help');
+      help.hidden = !help.hidden;
+    });
+  }
+
   document.getElementById('place-search-btn').addEventListener('click', handlePlaceSearch);
   document.getElementById('place-search').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {

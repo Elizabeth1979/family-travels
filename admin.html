@@ -118,8 +118,20 @@
                 <div class="admin-field admin-field-check">
                     <label class="admin-check">
                         <input type="checkbox" id="edit-unlisted" />
-                        <span>Unlisted — hide from the public map. Only people you send the link to can open it.</span>
+                        <span>Unlisted — hide from the public map
+                            <button type="button" class="admin-info" id="unlisted-info"
+                                aria-label="What does unlisted mean?"
+                                title="Unlisted albums never show on the map — not even to family. To give someone an unlisted album, send them its direct link (the album's Share button). You can still share the whole map with everyone: only your public albums appear on it.">?</button>
+                        </span>
                     </label>
+                    <div class="admin-unlisted-help" id="unlisted-help" hidden>
+                        <p><strong>What this does:</strong> the album disappears from the map and album list. It stays reachable only at its own direct link.</p>
+                        <ul>
+                            <li><strong>Sharing the whole map</strong> is safe — unlisted albums never appear on it, so everyone sees only your public trips.</li>
+                            <li><strong>To give someone an unlisted album</strong>, open it and use its <strong>Share</strong> button to send that direct link. The map won't lead anyone to it.</li>
+                            <li>Anyone with the link can open it (and could forward it) — it's private-by-link, not password-protected.</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="admin-field">

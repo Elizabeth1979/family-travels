@@ -472,3 +472,53 @@
   background: var(--bg-hover, rgb(102 126 234 / 12%));
   color: var(--primary-color, #667eea);
 }
+
+.admin-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 0.35rem;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--primary-color, #667eea);
+  background: var(--bg-hover, rgb(102 126 234 / 12%));
+  border: 1px solid var(--primary-color, #667eea);
+  border-radius: 50%;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.admin-info:focus-visible {
+  outline: 3px solid var(--focus-color, #667eea);
+  outline-offset: 1px;
+}
+
+.admin-unlisted-help {
+  margin-top: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  background: var(--bg-hover, rgb(102 126 234 / 8%));
+  border-radius: 10px;
+}
+
+.admin-unlisted-help p {
+  margin: 0 0 0.5rem;
+}
+
+.admin-unlisted-help ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.admin-unlisted-help li {
+  margin-bottom: 0.35rem;
+}
+
+.admin-unlisted-help li:last-child {
+  margin-bottom: 0;
+}
