@@ -953,10 +953,11 @@ body.menu-open .map-type-toggle {
     display: none;
 }
 
-/* Subtle, non-blocking variant: a small pill at the top of the map so the map
-   stays visible and interactive while album data loads in the background. */
+/* Subtle, non-blocking variant: a small pill at the bottom of the map so the
+   map stays visible and interactive while album data loads in the background. */
 .map-loading.map-loading--subtle {
-    top: 16px;
+    top: auto;
+    bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
     flex-direction: row;
