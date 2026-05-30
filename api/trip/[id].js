@@ -26,12 +26,14 @@ function escapeHtml(value) {
 
 async function findAlbum(id) {
   try {
+    // action=album resolves a single album by id, including unlisted ones, so a
+    // shared link to a hidden album still gets a title + cover-photo preview.
     const response = await fetch(
-      `${APPS_SCRIPT_URL}?action=list&master=${MASTER_FOLDER_ID}`
+      `${APPS_SCRIPT_URL}?action=album&id=${encodeURIComponent(id)}&master=${MASTER_FOLDER_ID}`
     );
-    const albums = await response.json();
-    if (!Array.isArray(albums)) return null;
-    return albums.find((album) => album.id === id) || null;
+    const album = await response.json();
+    if (!album || album.error) return null;
+    return album;
   } catch (err) {
     return null;
   }

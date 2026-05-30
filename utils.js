@@ -50,4 +50,28 @@ export async function fetchAlbums() {
   return data;
 }
 
+/**
+ * Fetches a single album by its slug id, including "unlisted" albums that are
+ * deliberately kept out of the public list. The album page uses this so a
+ * direct/shared link to a hidden album still opens.
+ * @param {string} id
+ * @returns {Promise<Object>} the album object
+ * @throws {Error} if the album can't be found or the request fails
+ */
+export async function fetchAlbum(id) {
+  const response = await fetch(
+    `${CONFIG.APPS_SCRIPT_URL}?action=album&id=${encodeURIComponent(id)}&master=${CONFIG.MASTER_FOLDER_ID}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch album: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data || data.error) {
+    throw new Error((data && data.error) || 'Album not found');
+  }
+  return data;
+}
+
 

@@ -73,16 +73,20 @@ function setStatus(message, kind = 'info') {
 async function loadAlbumsFresh() {
   // Cache-bust so the admin always gets the true current state from Apps Script
   // (e.g. right after an edit), regardless of the 5-minute public-site cache.
+  // all=1 returns unlisted albums too, so the admin can manage them.
   const response = await fetch(
-    `${CONFIG.APPS_SCRIPT_URL}?action=list&master=${CONFIG.MASTER_FOLDER_ID}&t=${Date.now()}`
+    `${CONFIG.APPS_SCRIPT_URL}?action=list&master=${CONFIG.MASTER_FOLDER_ID}&all=1&t=${Date.now()}`
   );
   if (!response.ok) throw new Error(`Failed to load albums: ${response.status}`);
   const data = await response.json();
   if (data && data.error) throw new Error(data.error);
   const list = Array.isArray(data) ? data : [];
-  // Refresh the shared cache so the next admin/map load paints instantly.
+  // Refresh the shared cache so the next admin/map load paints instantly. Strip
+  // unlisted albums first so they never leak into the public map's cache (the
+  // map reads this same key); the admin keeps the full list in memory.
   try {
-    localStorage.setItem(ALBUMS_CACHE_KEY, JSON.stringify({ data: list, timestamp: Date.now() }));
+    const publicList = list.filter((a) => !a.unlisted);
+    localStorage.setItem(ALBUMS_CACHE_KEY, JSON.stringify({ data: publicList, timestamp: Date.now() }));
   } catch (e) {
     console.warn('Album cache write failed:', e);
   }
@@ -176,6 +180,13 @@ function renderAlbumList() {
       meta.appendChild(badge);
     }
 
+    if (album.unlisted) {
+      const badge = document.createElement('span');
+      badge.className = 'admin-badge admin-badge-unlisted';
+      badge.textContent = 'Unlisted';
+      meta.appendChild(badge);
+    }
+
     button.appendChild(meta);
     li.appendChild(button);
     list.appendChild(li);
@@ -227,6 +238,7 @@ function selectAlbum(album) {
   document.getElementById('edit-type').value = album.type === 'event' ? 'event' : 'travel';
   document.getElementById('edit-date').value = album.date || '';
   document.getElementById('edit-description').value = album.description || '';
+  document.getElementById('edit-unlisted').checked = album.unlisted === true;
 
   const lat = typeof album.lat === 'number' ? album.lat : DEFAULT_LAT;
   const lng = typeof album.lng === 'number' ? album.lng : DEFAULT_LNG;
@@ -254,6 +266,7 @@ function startNewAlbum() {
   document.getElementById('edit-type').value = 'travel';
   document.getElementById('edit-date').value = '';
   document.getElementById('edit-description').value = '';
+  document.getElementById('edit-unlisted').checked = false;
   document.getElementById('edit-lat').value = '';
   document.getElementById('edit-lng').value = '';
 
@@ -496,6 +509,7 @@ function readEditorFields() {
     type: document.getElementById('edit-type').value === 'event' ? 'event' : 'travel',
     date: document.getElementById('edit-date').value.trim(),
     description: document.getElementById('edit-description').value.trim(),
+    unlisted: document.getElementById('edit-unlisted').checked,
     lat: latRaw === '' ? '' : parseFloat(latRaw),
     lng: lngRaw === '' ? '' : parseFloat(lngRaw),
     coverId: selectedCoverId,
@@ -528,6 +542,7 @@ async function handleSave() {
         description: fields.description,
         lat: fields.lat === '' ? DEFAULT_LAT : fields.lat,
         lng: fields.lng === '' ? DEFAULT_LNG : fields.lng,
+        unlisted: fields.unlisted,
       };
       mode = 'edit';
       document.getElementById('editor-heading').textContent = 'Edit album';
@@ -551,6 +566,7 @@ async function handleSave() {
         description: fields.description,
         coverId: fields.coverId || undefined,
         type: fields.type,
+        unlisted: fields.unlisted,
       });
       setStatus(`Saved "${fields.title}".`, 'success');
     }
@@ -602,6 +618,17 @@ function init() {
   document.getElementById('back-to-list-btn').addEventListener('click', closeEditor);
   document.getElementById('edit-lat').addEventListener('change', syncMarkerFromInputs);
   document.getElementById('edit-lng').addEventListener('change', syncMarkerFromInputs);
+
+  // The "?" next to the Unlisted checkbox toggles a fuller explanation. The
+  // button also has a native title= tooltip for quick hover hints on desktop;
+  // the toggle is the reliable path on touch devices where hover doesn't exist.
+  const unlistedInfo = document.getElementById('unlisted-info');
+  if (unlistedInfo) {
+    unlistedInfo.addEventListener('click', () => {
+      const help = document.getElementById('unlisted-help');
+      help.hidden = !help.hidden;
+    });
+  }
 
   document.getElementById('place-search-btn').addEventListener('click', handlePlaceSearch);
   document.getElementById('place-search').addEventListener('keydown', (e) => {

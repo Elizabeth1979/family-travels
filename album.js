@@ -1,4 +1,4 @@
-import { fetchAlbums } from './utils.js';
+import { fetchAlbums, fetchAlbum } from './utils.js';
 import { CONFIG } from './config.js';
 import { createTileLayer, createMapOptions } from './mapUtils.js';
 
@@ -56,7 +56,17 @@ async function initAlbum() {
 
     const albums = await albumsPromise;
 
-    const freshAlbum = albums.find((a) => a.id === albumId);
+    let freshAlbum = albums.find((a) => a.id === albumId);
+
+    // Unlisted albums are kept out of the public list, so fetch this one
+    // directly by id. This is what makes a shared link to a hidden album work.
+    if (!freshAlbum) {
+      try {
+        freshAlbum = await fetchAlbum(albumId);
+      } catch (e) {
+        console.warn('Direct album fetch failed:', e);
+      }
+    }
 
     if (!freshAlbum) {
       showError("Album not found");
