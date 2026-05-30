@@ -74,10 +74,11 @@ async function initMap() {
     // Update toggle UI to match preference
     updateToggleUI(currentMapType);
 
-    // Show a loading state for the 2D map too (the gallery has its own), so the
-    // first view isn't a blank default world map with no pins while data loads.
+    // Show a small, non-blocking hint for the 2D map (the gallery has its own
+    // full card), so the map is visible and usable right away while the album
+    // data loads in the background — pins pop in when ready.
     if (currentMapType === 'accessible') {
-        showLoading('Loading map…');
+        showLoading('Loading places…', true);
     }
 
     try {
@@ -758,8 +759,11 @@ function destroyCurrentMap() {
 }
 
 
-// Show loading indicator
-function showLoading(message = 'Loading map...') {
+// Show loading indicator. When subtle is true it's a small, non-blocking pill
+// (used for the 2D map, so the map stays visible and usable while album data
+// loads in the background); otherwise it's the centered card (used by the
+// gallery, which has nothing to show until data arrives).
+function showLoading(message = 'Loading map...', subtle = false) {
     const loading = document.getElementById('map-loading');
     const loadingText = loading.querySelector('.loading-text');
 
@@ -767,6 +771,7 @@ function showLoading(message = 'Loading map...') {
         loadingText.textContent = message;
     }
 
+    loading.classList.toggle('map-loading--subtle', subtle);
     loading.classList.remove('hidden');
 }
 
@@ -774,6 +779,7 @@ function showLoading(message = 'Loading map...') {
 function hideLoading() {
     const loading = document.getElementById('map-loading');
     loading.classList.add('hidden');
+    loading.classList.remove('map-loading--subtle');
 }
 
 // Announce to screen readers

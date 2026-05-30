@@ -6,8 +6,9 @@ as-is unless they specifically ask to change it:
 
 - On load the map frames **all** pins so every place is visible and the visitor
   can see where to tap (`frameAllPins` + `fitBounds` in `renderLeafletMarkers`,
-  `map.js`, capped at `maxZoom: 12`). A "Loading…" state shows until the pins
-  appear so the first view is never a blank default world map.
+  `map.js`, capped at `maxZoom: 12`). A small, non-blocking "Loading places…"
+  pill (`map-loading--subtle`) shows until the pins appear, so the map stays
+  visible and usable while album data loads in the background.
   (This replaced an earlier "frame the densest cluster" behavior at the owner's
   request — Elizabeth asked to fit all pins so none start off-screen.)
 - Full-world zoom-out stays available (no forced minimum zoom).
