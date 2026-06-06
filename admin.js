@@ -44,6 +44,11 @@ async function adminPost(action, params) {
   if (!data || data.ok !== true) {
     throw new Error((data && data.error) || 'Request failed');
   }
+  // Every adminPost is a write (create/edit/rename/sharing/upload), so the
+  // shared album cache is now stale. Drop it immediately — even if the
+  // follow-up refresh() fails (e.g. a network blip), the next public-map load
+  // won't serve a stale list and the new/edited album shows up right away.
+  clearAlbumsCache();
   return data;
 }
 
@@ -87,6 +92,17 @@ async function loadAlbumsFresh() {
     console.warn('Album cache write failed:', e);
   }
   return list;
+}
+
+// Discard the shared album cache so the next admin/map load fetches fresh data.
+// Called after every write so a freshly created or edited album appears on the
+// public map without waiting out the 5-minute cache window.
+function clearAlbumsCache() {
+  try {
+    localStorage.removeItem(ALBUMS_CACHE_KEY);
+  } catch (e) {
+    console.warn('Album cache clear failed:', e);
+  }
 }
 
 // Read whatever albums are in the shared cache (ignoring age) for an instant
