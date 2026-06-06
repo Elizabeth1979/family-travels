@@ -533,10 +533,7 @@ async function handleSave() {
       document.getElementById('editor-heading').textContent = 'Edit album';
       document.getElementById('save-btn').textContent = 'Save';
       document.getElementById('cover-field').hidden = false;
-      const help = document.getElementById('new-album-help');
-      help.hidden = false;
-      document.getElementById('open-drive-link').href =
-        `https://drive.google.com/drive/folders/${result.folderId}`;
+      document.getElementById('new-album-help').hidden = false;
       setDriveLink(result.folderId);
     } else {
       setStatus('Saving…');
