@@ -348,6 +348,28 @@ function renderGallery() {
   });
 }
 
+// Whether to open videos in a new browser tab instead of the in-page player.
+// Google Drive's embedded player commonly renders a black screen on phones/
+// tablets because the embedded (third-party) context can't use the cookies
+// Drive needs to start playback. Opening the Drive viewer in a full tab plays
+// reliably. Detected via a coarse pointer (touch devices).
+function shouldOpenVideoInNewTab() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
+// Build the Google Drive viewer URL (plays reliably in a full browser tab)
+// from a stored source URL like .../uc?export=view&id=FILE_ID
+function driveViewUrlFromSrc(src) {
+  const match = (src || "").match(/[?&]id=([^&]+)/);
+  return match && match[1]
+    ? `https://drive.google.com/file/d/${match[1]}/view`
+    : null;
+}
+
 // Create a single gallery item element
 // eagerLoad: if true, don't use lazy loading (for first row)
 function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) {
@@ -450,6 +472,22 @@ function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) 
     galleryItem.appendChild(videoLabel);
     galleryItem.appendChild(playIcon);
     galleryItem.setAttribute("data-pswp-type", "video");
+
+    // On touch devices, Drive's embedded player usually shows a black screen,
+    // so open the video in a full browser tab where it plays reliably.
+    if (shouldOpenVideoInNewTab()) {
+      const viewUrl = driveViewUrlFromSrc(item.src);
+      if (viewUrl) {
+        galleryItem.href = viewUrl;
+        galleryItem.setAttribute("target", "_blank");
+        galleryItem.setAttribute("rel", "noopener");
+        // Stop PhotoSwipe from intercepting the click so the link opens
+        // normally in a new tab instead of the in-page lightbox.
+        galleryItem.addEventListener("click", (e) => {
+          e.stopPropagation();
+        });
+      }
+    }
   } else {
     const img = document.createElement("img");
 
@@ -678,6 +716,21 @@ function initPhotoSwipe() {
       iframe.style.border = 'none';
 
       wrapper.appendChild(iframe);
+
+      // Visible fallback: if the embedded player shows a black screen (a known
+      // Google Drive limitation), let the visitor open the video in a new tab.
+      const idMatch = videoUrl.match(/\/file\/d\/([^/]+)\//);
+      if (idMatch && idMatch[1]) {
+        wrapper.style.position = 'relative';
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = `https://drive.google.com/file/d/${idMatch[1]}/view`;
+        fallbackLink.target = '_blank';
+        fallbackLink.rel = 'noopener';
+        fallbackLink.className = 'video-open-newtab';
+        fallbackLink.textContent = "Video not playing? Open in new tab ↗";
+        wrapper.appendChild(fallbackLink);
+      }
+
       content.element = wrapper;
       content.type = 'video';
 
