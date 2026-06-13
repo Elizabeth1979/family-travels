@@ -683,6 +683,42 @@ header nav {
 }
 
 /* Leaflet Popup Styles */
+/* Cluster bubble contrast. The markercluster plugin's default fills are only
+   60% opaque, so the green/yellow bubbles and their counts wash out over the
+   satellite map. Scope under #map so these win over the plugin CSS (loaded at
+   runtime): solid fills + a bold dark number + a white ring keep the count
+   clearly legible. The outer halo stays a soft translucent ring. */
+#map .marker-cluster div {
+    color: #1a1a1a;
+    font-weight: 700;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+#map .marker-cluster-small {
+    background-color: rgba(110, 204, 57, 0.4);
+}
+
+#map .marker-cluster-small div {
+    background-color: #6ecc39;
+}
+
+#map .marker-cluster-medium {
+    background-color: rgba(240, 194, 12, 0.4);
+}
+
+#map .marker-cluster-medium div {
+    background-color: #f0c20c;
+}
+
+#map .marker-cluster-large {
+    background-color: rgba(241, 128, 23, 0.4);
+}
+
+#map .marker-cluster-large div {
+    background-color: #f18017;
+}
+
 #map .leaflet-popup-content-wrapper,
 #map .leaflet-popup-tip,
 #album-map .leaflet-popup-content-wrapper,
