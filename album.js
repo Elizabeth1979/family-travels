@@ -646,7 +646,15 @@ function initPhotoSwipe() {
     });
   });
 
-  // Handle videos with custom content
+  // Handle videos with custom content.
+  //
+  // A video slide starts as a static poster (the Drive thumbnail) with a play
+  // button — NOT a live iframe. That's what lets you flip through videos the
+  // same way you flip through photos: while it's just a poster, PhotoSwipe's
+  // own swipe / arrow-key / arrow-button navigation works, because there's no
+  // Google Drive iframe swallowing the touch/keyboard events. The iframe is
+  // only created when the visitor actually taps play, and it's torn back down
+  // to the poster when they move to another slide (see the 'change' handler).
   lightbox.on('contentLoad', (e) => {
     const { content, isLazy } = e;
 
@@ -655,6 +663,7 @@ function initPhotoSwipe() {
 
       // Get the video URL from the href attribute
       let videoUrl = content.data.element.href || content.data.src;
+      let fileId = null;
 
       // Convert Google Drive URL to proper streaming format
       // From: https://drive.google.com/uc?export=view&id=FILE_ID
@@ -662,35 +671,68 @@ function initPhotoSwipe() {
       if (videoUrl.includes('drive.google.com')) {
         const fileIdMatch = videoUrl.match(/[?&]id=([^&]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
-          const fileId = fileIdMatch[1];
+          fileId = fileIdMatch[1];
           videoUrl = `https://drive.google.com/file/d/${fileId}/preview`;
         }
       }
 
-      console.log('Loading video:', videoUrl);
-
-      // Create a wrapper div that PhotoSwipe will size correctly
+      // Wrapper PhotoSwipe sizes to the video's real aspect ratio (detected
+      // from the thumbnail in loadDimensions).
       const wrapper = document.createElement('div');
-      wrapper.style.width = '100%';
-      wrapper.style.height = '100%';
-      wrapper.style.display = 'flex';
-      wrapper.style.alignItems = 'center';
-      wrapper.style.justifyContent = 'center';
-      wrapper.style.background = '#000';
+      wrapper.className = 'pswp-video-wrapper';
 
-      // Use an iframe for Google Drive videos. Fill the wrapper, which
-      // PhotoSwipe sizes to the video's real aspect ratio (detected from the
-      // thumbnail in loadDimensions). Don't force a 16:9 shape here — that was
-      // squashing portrait phone videos into a small letterboxed box.
-      const iframe = document.createElement('iframe');
-      iframe.src = videoUrl;
-      iframe.frameBorder = '0';
-      iframe.allow = 'autoplay';
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
-      iframe.style.border = 'none';
+      // Poster image — a larger version of the same thumbnail used in the grid.
+      const poster = document.createElement('img');
+      poster.className = 'pswp-video-poster';
+      poster.alt = content.data.element.getAttribute('data-caption') || '';
+      if (fileId) {
+        poster.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+      }
 
-      wrapper.appendChild(iframe);
+      // Play button overlay. Tapping it swaps the poster for the Drive iframe.
+      const playBtn = document.createElement('button');
+      playBtn.type = 'button';
+      playBtn.className = 'pswp-video-play';
+      playBtn.setAttribute('aria-label', 'Play video');
+      playBtn.innerHTML = '<span class="pswp-video-play__icon">▶</span>';
+
+      // Restore the poster + play button and remove the iframe (stops playback).
+      const resetToPoster = () => {
+        const existing = wrapper.querySelector('iframe');
+        if (existing) existing.remove();
+        wrapper.classList.remove('is-playing');
+        if (!wrapper.contains(poster)) wrapper.appendChild(poster);
+        if (!wrapper.contains(playBtn)) wrapper.appendChild(playBtn);
+      };
+
+      const playVideo = () => {
+        if (wrapper.querySelector('iframe')) return;
+        const iframe = document.createElement('iframe');
+        iframe.src = videoUrl;
+        iframe.frameBorder = '0';
+        iframe.allow = 'autoplay; fullscreen';
+        iframe.allowFullscreen = true;
+        wrapper.innerHTML = '';
+        wrapper.appendChild(iframe);
+        wrapper.classList.add('is-playing');
+        // Now that a real video is on screen, fade the lightbox chrome away.
+        refreshTopBarAutoHide();
+      };
+
+      // Only the button starts playback — leaving the rest of the poster free
+      // for PhotoSwipe to interpret swipes, so you can still flip past a video
+      // without playing it. stopPropagation keeps a deliberate tap from also
+      // toggling PhotoSwipe's UI.
+      playBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        playVideo();
+      });
+
+      // Expose the reset so the slide-change/close handlers can stop playback.
+      wrapper._resetVideo = resetToPoster;
+
+      wrapper.appendChild(poster);
+      wrapper.appendChild(playBtn);
       content.element = wrapper;
       content.type = 'video';
 
@@ -761,38 +803,33 @@ function initPhotoSwipe() {
     });
   });
 
-  // Pause previous video when changing slides
+  // When you flip to another slide, reset every other video back to its poster.
+  // This stops the playing video and means a video you return to starts fresh
+  // (and, while a poster, is freely swipeable again).
   lightbox.on('change', () => {
-    const contentElements = document.querySelectorAll('.pswp__content');
-    const currentSlideIndex = lightbox.pswp.currIndex;
-
-    contentElements.forEach((content, i) => {
-      if (i !== currentSlideIndex) {
-        const iframe = content.querySelector('iframe');
-        if (iframe) {
-          // Pause non-current videos by resetting src
-          const currentSrc = iframe.src;
-          iframe.src = '';
-          iframe.src = currentSrc;
-        }
+    const pswp = lightbox.pswp;
+    const currentEl = pswp.currSlide && pswp.currSlide.content && pswp.currSlide.content.element;
+    document.querySelectorAll('.pswp-video-wrapper').forEach((wrapper) => {
+      if (wrapper !== currentEl && typeof wrapper._resetVideo === 'function') {
+        wrapper._resetVideo();
       }
     });
   });
 
-  // Pause all videos when lightbox closes
+  // Stop all videos when the lightbox closes.
   lightbox.on('close', () => {
-    const iframes = document.querySelectorAll('.pswp__content iframe');
-    iframes.forEach(iframe => {
-      iframe.src = '';
+    document.querySelectorAll('.pswp-video-wrapper').forEach((wrapper) => {
+      if (typeof wrapper._resetVideo === 'function') wrapper._resetVideo();
     });
   });
 
-  // Auto-hide the lightbox's own top buttons (photo counter, download, close)
-  // on video slides. Tapping a playing video can't toggle them away — the tap
-  // goes into Google Drive's player frame, not PhotoSwipe — so otherwise they
-  // sit over the screen the whole time. They fade out a few seconds after the
-  // video appears and come back when you switch slides. (Google Drive's own
-  // in-player controls live inside its frame and can't be changed from here.)
+  // Auto-hide the lightbox's own top buttons (photo counter, download) once a
+  // video is actually playing. Tapping a playing video can't toggle them away
+  // — the tap goes into Google Drive's player frame, not PhotoSwipe — so
+  // otherwise they sit over the screen the whole time. They fade out a few
+  // seconds after playback starts and come back when you switch slides. (The
+  // close button stays; Google Drive's own in-player controls live inside its
+  // frame and can't be changed from here.)
   let topBarHideTimer = null;
   const refreshTopBarAutoHide = () => {
     const pswp = lightbox.pswp;
@@ -800,8 +837,11 @@ function initPhotoSwipe() {
     if (!topBar) return;
     clearTimeout(topBarHideTimer);
     topBar.classList.remove('pswp__top-bar--autohide');
-    const isVideo = pswp.currSlide?.data?.element?.getAttribute('data-pswp-type') === 'video';
-    if (isVideo) {
+    // Only fade the chrome once a video is actually playing. A video showing
+    // its poster behaves like a photo, so its counter/download stay put.
+    const currentEl = pswp.currSlide?.content?.element;
+    const isPlaying = currentEl && currentEl.classList && currentEl.classList.contains('is-playing');
+    if (isPlaying) {
       topBarHideTimer = setTimeout(() => {
         topBar.classList.add('pswp__top-bar--autohide');
       }, 3500);
