@@ -75,6 +75,14 @@
   margin-bottom: 1.1rem;
 }
 
+/* The author `display: flex` above otherwise beats the UA `[hidden]` rule, so
+   fields toggled with the `hidden` attribute (e.g. the Folder / "Open folder in
+   Drive" link and the cover picker before an album's folder exists) would stay
+   visible. Re-hide them with a more specific selector. */
+.admin-field[hidden] {
+  display: none;
+}
+
 .admin-field label {
   font-weight: 600;
   font-size: 0.9rem;
