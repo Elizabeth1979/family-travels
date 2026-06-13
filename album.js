@@ -270,24 +270,34 @@ async function loadImageDimensions() {
         const isVideo = item.mime && item.mime.startsWith("video/");
 
         if (isVideo) {
-          // For videos, load video metadata to get actual dimensions
-          const video = document.createElement('video');
-          video.preload = 'metadata';
+          // Get the video's real aspect ratio from its Drive thumbnail.
+          // (Loading the video file itself cross-origin from Drive doesn't
+          // work, so the old <video> probe always failed and fell back to
+          // 16:9 — which squashed portrait phone videos into a tiny box.)
+          const thumb = new Image();
+          const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
 
-          video.onloadedmetadata = () => {
-            link.setAttribute("data-pswp-width", video.videoWidth);
-            link.setAttribute("data-pswp-height", video.videoHeight);
+          thumb.onload = () => {
+            if (thumb.naturalWidth && thumb.naturalHeight) {
+              link.setAttribute("data-pswp-width", thumb.naturalWidth);
+              link.setAttribute("data-pswp-height", thumb.naturalHeight);
+            } else {
+              link.setAttribute("data-pswp-width", "1080");
+              link.setAttribute("data-pswp-height", "1920");
+            }
             resolve();
           };
 
-          video.onerror = () => {
-            // Fallback dimensions if video fails to load
-            link.setAttribute("data-pswp-width", "1920");
-            link.setAttribute("data-pswp-height", "1080");
+          thumb.onerror = () => {
+            // Fallback dimensions if the thumbnail fails to load
+            link.setAttribute("data-pswp-width", "1080");
+            link.setAttribute("data-pswp-height", "1920");
             resolve();
           };
 
-          video.src = link.href;
+          thumb.src = fileIdMatch && fileIdMatch[1]
+            ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w400`
+            : link.href;
         } else {
           // For images, use a smaller version to get dimensions (much faster!)
           // We only need the aspect ratio, not the full resolution
@@ -664,17 +674,16 @@ function initPhotoSwipe() {
       wrapper.style.justifyContent = 'center';
       wrapper.style.background = '#000';
 
-      // Use an iframe for Google Drive videos with aspect ratio preserved
+      // Use an iframe for Google Drive videos. Fill the wrapper, which
+      // PhotoSwipe sizes to the video's real aspect ratio (detected from the
+      // thumbnail in loadDimensions). Don't force a 16:9 shape here — that was
+      // squashing portrait phone videos into a small letterboxed box.
       const iframe = document.createElement('iframe');
       iframe.src = videoUrl;
       iframe.frameBorder = '0';
       iframe.allow = 'autoplay';
-      // Use max dimensions to preserve aspect ratio within the container
-      iframe.style.maxWidth = '100%';
-      iframe.style.maxHeight = '100%';
-      iframe.style.width = '90vw';
-      iframe.style.height = '80vh';
-      iframe.style.aspectRatio = '16 / 9';
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
       iframe.style.border = 'none';
 
       wrapper.appendChild(iframe);

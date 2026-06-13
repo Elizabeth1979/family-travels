@@ -1682,15 +1682,18 @@ body.menu-open .map-type-toggle {
     opacity: 1 !important;
 }
 
-/* Fade the lightbox's own top buttons (counter/download/close) in and out.
-   On video slides album.js adds the --autohide class a few seconds after the
-   video appears so the buttons don't sit on screen. Does not affect Google
-   Drive's in-player controls, which live inside its frame. */
-.pswp__top-bar {
+/* Fade the lightbox's own counter and download button in and out on video
+   slides (album.js adds the --autohide class a few seconds after the video
+   appears) so they're not in the way. The close button stays visible so
+   there's always a way out. Google Drive's in-player controls live inside its
+   frame and are unaffected. */
+.pswp__counter,
+.pswp__top-bar .pswp__button {
     transition: opacity 0.4s ease;
 }
 
-.pswp .pswp__top-bar--autohide {
+.pswp .pswp__top-bar--autohide .pswp__counter,
+.pswp .pswp__top-bar--autohide .pswp__button:not(.pswp__button--close) {
     opacity: 0 !important;
     pointer-events: none;
 }
