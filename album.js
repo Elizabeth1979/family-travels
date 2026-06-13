@@ -850,6 +850,31 @@ function initPhotoSwipe() {
   lightbox.on('change', refreshTopBarAutoHide);
   lightbox.on('close', () => clearTimeout(topBarHideTimer));
 
+  // Make the close (X) button act as a "back" while a video is playing. A
+  // playing Google Drive iframe traps swipes, so the X is the natural way out
+  // — but a single press all the way to the thumbnail grid is too far. Instead,
+  // the first press on a playing video stops it and returns to the swipeable
+  // poster (so you can keep flipping); pressing X again, or on a photo/poster,
+  // closes the lightbox as usual. Capture phase + stopImmediatePropagation so
+  // this runs before PhotoSwipe's own close handler.
+  lightbox.on('afterInit', () => {
+    const pswp = lightbox.pswp;
+    const root = pswp && pswp.element;
+    if (!root) return;
+    root.addEventListener('click', (ev) => {
+      const closeBtn = ev.target.closest && ev.target.closest('.pswp__button--close');
+      if (!closeBtn) return;
+      const currentEl = pswp.currSlide?.content?.element;
+      if (currentEl && currentEl.classList.contains('is-playing') &&
+          typeof currentEl._resetVideo === 'function') {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        currentEl._resetVideo();
+        refreshTopBarAutoHide();
+      }
+    }, true);
+  });
+
   lightbox.init();
 
   // Set up Intersection Observer to pause videos when scrolling out of view
