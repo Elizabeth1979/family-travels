@@ -126,6 +126,12 @@
   margin: 0;
 }
 
+/* Token saved confirmation — green so it's clear the token "took". */
+.admin-hint-ok {
+  color: #2ecc71;
+  font-weight: 500;
+}
+
 /* Floating toast — pinned to the viewport so feedback is visible no matter
    where you've scrolled (e.g. saving deep in the editor). Hidden until a
    message is set; auto-hides after a few seconds (see setStatus). */

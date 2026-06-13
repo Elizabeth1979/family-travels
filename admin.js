@@ -601,10 +601,38 @@ async function refresh() {
 
 function init() {
   const tokenInput = document.getElementById('admin-token');
+  const tokenHint = document.querySelector('.admin-token-field .admin-hint');
+
+  // The token saves silently to localStorage, so make its state obvious: the
+  // hint under the field reflects whether a token is currently saved, both on
+  // load and as you type.
+  function reflectTokenState() {
+    if (!tokenHint) return;
+    const hasToken = Boolean(getToken());
+    tokenHint.textContent = hasToken
+      ? '✓ Saved in this browser. Used for every change.'
+      : 'Stored only in this browser. Required for any change.';
+    tokenHint.classList.toggle('admin-hint-ok', hasToken);
+  }
+
   const savedToken = localStorage.getItem(TOKEN_KEY);
   if (savedToken) tokenInput.value = savedToken;
-  tokenInput.addEventListener('change', () => {
+  reflectTokenState();
+
+  // Save as you type so the token can't be "lost" by forgetting to click away.
+  tokenInput.addEventListener('input', () => {
     localStorage.setItem(TOKEN_KEY, getToken());
+    reflectTokenState();
+  });
+  // Confirm with a toast once you leave the field.
+  tokenInput.addEventListener('change', () => {
+    const value = getToken();
+    localStorage.setItem(TOKEN_KEY, value);
+    reflectTokenState();
+    setStatus(
+      value ? 'Admin token saved in this browser.' : 'Admin token cleared.',
+      value ? 'success' : 'info'
+    );
   });
 
   document.getElementById('refresh-btn').addEventListener('click', refresh);
