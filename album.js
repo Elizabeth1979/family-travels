@@ -19,9 +19,13 @@ async function initAlbum() {
       return;
     }
 
-    // Check if this is a shared link (hide back button)
+    // Shared links (the ones friends receive) normally hide the "back to map"
+    // arrow so a single-album link can't be used to roam the whole map. The
+    // owner is recognized by the admin token saved in this browser, so they
+    // keep the back arrow even on a shared link and can always return to the map.
     const isShared = urlParams.get("shared") === "true";
-    if (isShared) {
+    const isOwner = Boolean(localStorage.getItem("admin_token"));
+    if (isShared && !isOwner) {
       const backLink = document.querySelector('.back-link');
       if (backLink) {
         backLink.style.display = 'none';
