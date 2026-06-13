@@ -774,6 +774,29 @@ function initPhotoSwipe() {
     });
   });
 
+  // Auto-hide the lightbox's own top buttons (photo counter, download, close)
+  // on video slides. Tapping a playing video can't toggle them away — the tap
+  // goes into Google Drive's player frame, not PhotoSwipe — so otherwise they
+  // sit over the screen the whole time. They fade out a few seconds after the
+  // video appears and come back when you switch slides. (Google Drive's own
+  // in-player controls live inside its frame and can't be changed from here.)
+  let topBarHideTimer = null;
+  const refreshTopBarAutoHide = () => {
+    const pswp = lightbox.pswp;
+    const topBar = pswp && pswp.element && pswp.element.querySelector('.pswp__top-bar');
+    if (!topBar) return;
+    clearTimeout(topBarHideTimer);
+    topBar.classList.remove('pswp__top-bar--autohide');
+    const isVideo = pswp.currSlide?.data?.element?.getAttribute('data-pswp-type') === 'video';
+    if (isVideo) {
+      topBarHideTimer = setTimeout(() => {
+        topBar.classList.add('pswp__top-bar--autohide');
+      }, 3500);
+    }
+  };
+  lightbox.on('change', refreshTopBarAutoHide);
+  lightbox.on('close', () => clearTimeout(topBarHideTimer));
+
   lightbox.init();
 
   // Set up Intersection Observer to pause videos when scrolling out of view
