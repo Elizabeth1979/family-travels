@@ -1758,8 +1758,11 @@ body.menu-open .map-type-toggle {
    just clutter the screen (see the phone view, where they sat over the photo).
    We only show them to visitors who can't swipe:
 
-   1. Mouse users — `hover: hover` means the primary input is a pointer that can
-      hover (so there's nothing to swipe), and it covers click-driven devices.
+   1. Mouse / trackpad users — require BOTH `hover: hover` and `pointer: fine`.
+      A precise, hovering pointer means a real cursor with nothing to swipe.
+      Requiring `pointer: fine` is what excludes phones and tablets: their
+      primary pointer is coarse, so even handsets that wrongly report
+      `hover: hover` (some Samsung/Android browsers do) stay arrow-free.
    2. Video slides — the Drive iframe swallows swipes, so EVERYONE (touch
       included) needs the arrows to move past a video. album.js toggles the
       `pswp--current-video` class on the lightbox root when the current slide is
@@ -1773,7 +1776,7 @@ body.menu-open .map-type-toggle {
     z-index: 20;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     [class*="pswp__button--arrow"] {
         display: block !important;
         visibility: visible !important;
