@@ -577,13 +577,6 @@ function createAltButton(description) {
   return altButton;
 }
 
-// Height (px) of the caption band reserved below the image in the lightbox.
-// We shrink the photo to sit above this band so the caption never covers it.
-// Scales with viewport height, clamped so it stays sensible on any screen.
-function captionBandHeight(viewportY) {
-  return Math.min(200, Math.max(80, Math.round(viewportY * 0.2)));
-}
-
 // Initialize PhotoSwipe lightbox
 function initPhotoSwipe() {
   const lightbox = new PhotoSwipeLightbox({
@@ -597,20 +590,6 @@ function initPhotoSwipe() {
     // Custom options
     closeOnVerticalDrag: true,
     pinchToClose: true,
-
-    // Reserve a band at the bottom of the viewport for the caption so the photo
-    // is scaled to fit *above* it. Without this, tall portrait photos fill the
-    // screen and the caption ends up overlapping the image. Only slides that
-    // actually have a description reserve the space.
-    paddingFn: (viewportSize, itemData) => {
-      const hasCaption = !!itemData?.element?.getAttribute("data-caption");
-      return {
-        top: 0,
-        bottom: hasCaption ? captionBandHeight(viewportSize.y) : 0,
-        left: 0,
-        right: 0,
-      };
-    },
   });
 
   // Add custom download button to toolbar
@@ -768,25 +747,16 @@ function initPhotoSwipe() {
         captionContent.className = 'pswp__caption-content';
         el.appendChild(captionContent);
 
-        // Size the caption to exactly fill the band reserved by `paddingFn`,
-        // pinned to the bottom of the viewport (the CSS anchors it there). The
-        // photo is scaled to sit above this band, so they never overlap.
-        const positionCaption = () => {
-          const hasCaption = !!pswp.currSlide?.data?.element?.getAttribute('data-caption');
-          if (!hasCaption) return;
-          el.style.height = captionBandHeight(pswp.viewportSize.y) + 'px';
-        };
-
-        // Update caption content and position when slide changes
+        // Show/hide the caption for the current slide. The caption is a
+        // bottom-anchored gradient overlay (see CSS), so it never shrinks or
+        // shifts the photo: it sits in the letterbox area and only fades softly
+        // over the image when the photo reaches the bottom of the screen.
         const updateCaption = () => {
-          const currSlideData = pswp.currSlide.data;
-          const caption = currSlideData.element?.getAttribute('data-caption') || '';
+          const caption = pswp.currSlide?.data?.element?.getAttribute('data-caption') || '';
 
           if (caption) {
             captionContent.textContent = caption;
             el.classList.remove('pswp__caption--hidden');
-            // Position after a tiny delay to ensure slide dimensions are ready
-            requestAnimationFrame(positionCaption);
           } else {
             captionContent.textContent = '';
             el.classList.add('pswp__caption--hidden');
@@ -794,8 +764,6 @@ function initPhotoSwipe() {
         };
 
         pswp.on('change', updateCaption);
-        pswp.on('zoomPanUpdate', positionCaption);
-        pswp.on('resize', positionCaption);
 
         // Initial caption for first slide
         setTimeout(updateCaption, 50);

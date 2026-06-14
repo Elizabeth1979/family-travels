@@ -6,6 +6,20 @@
 // Get it from: https://makersuite.google.com/app/apikey
 const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 
+// Gemini model used for alt-text generation. NOTE: gemini-1.5-flash is being
+// retired by Google — if generateContent calls start returning 404/"model not
+// found", change this to a current Flash model (e.g. gemini-2.5-flash).
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+// Optional: tell Gemini who the family members are so it can NAME them in
+// descriptions (instead of writing "a woman and a young boy"). Leave the string
+// empty for generic descriptions. One person per line, "Name — details":
+//   const FAMILY_ROSTER =
+//     "Elli — mother, ~45, glasses, dark hair usually in a bun.\n" +
+//     "Daniel — son, ~9, blond, often missing a front tooth.\n" +
+//     "Jonathan — toddler son, ~3.";
+const FAMILY_ROSTER = "";
+
 // Set to true to enable AI-generated alt text for images without descriptions
 const ENABLE_AI_ALT_TEXT = false;  // Disabled - enable after testing
 
@@ -301,13 +315,20 @@ function generateAIDescription(fileId) {
     const mimeType = blob.getContentType();
 
     // Prepare Gemini API request
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+    // Base prompt, plus an optional family roster so Gemini can name people it
+    // recognizes. Without a roster it falls back to generic descriptions.
+    let promptText = "Generate a concise, descriptive alt text for this family photo (1-2 sentences). Focus on what's visible: people, activities, location, and setting. Be specific but brief.";
+    if (FAMILY_ROSTER) {
+      promptText += "\n\nThese are the family members who may appear in the photo. Use these names when you are confident a person matches the description; if you are unsure, describe them generically instead of guessing a name:\n" + FAMILY_ROSTER;
+    }
 
     const payload = {
       contents: [{
         parts: [
           {
-            text: "Generate a concise, descriptive alt text for this family photo (1-2 sentences). Focus on what's visible: people, activities, location, and setting. Be specific but brief."
+            text: promptText
           },
           {
             inline_data: {
@@ -506,4 +527,81 @@ function adminUploadFile(body) {
     Logger.log('Could not set file sharing: ' + err);
   }
   return jsonResponse({ ok: true, fileId: file.getId(), name: file.getName() });
+}
+
+// ============================================
+// BATCH ALT-TEXT BACKFILL  (run from the editor, not the web)
+// ============================================
+//
+// Fills in AI descriptions for every image in ONE album folder and saves each
+// one onto the Drive file (so the album page picks them up automatically).
+//
+// How to run:
+//   1. Put a real key in GEMINI_API_KEY (top of this file).
+//   2. (Optional) fill in FAMILY_ROSTER so people are named instead of "a woman".
+//   3. Paste the album's Drive folder ID into BACKFILL_FOLDER_ID below.
+//   4. In the editor, pick `backfillAlbumDescriptions` from the function
+//      dropdown and click Run. Watch progress in View → Logs (Executions).
+//
+// It SKIPS images that already have a description, so if it stops at Apps
+// Script's ~6-minute limit, just run it again to continue where it left off.
+// Set OVERWRITE_EXISTING = true to regenerate descriptions that already exist.
+//
+// ENABLE_AI_ALT_TEXT does NOT need to be true for this — that flag only controls
+// the slow 3-at-a-time backfill during normal page loads.
+
+const BACKFILL_FOLDER_ID = "PASTE_ALBUM_FOLDER_ID_HERE";
+const OVERWRITE_EXISTING = false;
+const BACKFILL_DELAY_MS = 1500; // pause between Gemini calls to respect rate limits
+
+function backfillAlbumDescriptions() {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+    Logger.log('Set GEMINI_API_KEY at the top of the file first.');
+    return;
+  }
+  if (!BACKFILL_FOLDER_ID || BACKFILL_FOLDER_ID === 'PASTE_ALBUM_FOLDER_ID_HERE') {
+    Logger.log('Set BACKFILL_FOLDER_ID to the album folder ID first.');
+    return;
+  }
+
+  const folder = DriveApp.getFolderById(BACKFILL_FOLDER_ID);
+  const files = folder.getFiles();
+
+  const start = Date.now();
+  const MAX_RUN_MS = 5 * 60 * 1000; // stop before the ~6-min Apps Script cap
+  let generated = 0, skipped = 0, failed = 0;
+
+  while (files.hasNext()) {
+    if (Date.now() - start > MAX_RUN_MS) {
+      Logger.log('Approaching the time limit — stopping. Run again to continue.');
+      break;
+    }
+
+    const file = files.next();
+    if (!file.getMimeType().startsWith('image/')) continue;
+
+    if (!OVERWRITE_EXISTING && (file.getDescription() || '')) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      // generateAIDescription() saves the result onto the file itself.
+      const description = generateAIDescription(file.getId());
+      if (description) {
+        generated++;
+        Logger.log('OK  ' + file.getName() + ' -> ' + description);
+      } else {
+        failed++;
+        Logger.log('NO  ' + file.getName() + ' (empty/blocked response)');
+      }
+    } catch (err) {
+      failed++;
+      Logger.log('ERR ' + file.getName() + ': ' + err);
+    }
+
+    Utilities.sleep(BACKFILL_DELAY_MS);
+  }
+
+  Logger.log(`Backfill finished for "${folder.getName()}": generated=${generated}, skipped=${skipped}, failed=${failed}.`);
 }
