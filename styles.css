@@ -1813,17 +1813,19 @@ body.menu-open .map-type-toggle {
     right: 0;
     bottom: 0;
     box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 14px 24px;
+    /* Generous top padding lets the gradient fade in above the text. */
+    padding: 60px 24px 22px;
     text-align: center;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
     transition: opacity 0.3s ease;
     z-index: 10;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(2px);
+    /* Soft scrim: solid at the bottom, fully transparent at the top, so the
+       photo is never boxed in or shifted — the text just sits over a fade. */
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.88) 0%,
+        rgba(0, 0, 0, 0.7) 38%,
+        rgba(0, 0, 0, 0) 100%
+    );
 }
 
 .pswp__caption--hidden {
