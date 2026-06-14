@@ -511,6 +511,49 @@ function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) 
   return { element: galleryItem, header, isVideo, itemCount };
 }
 
+// The grid ALT tooltip lives on <body> (not inside the card) so the card's
+// `overflow: hidden` can't clip the description. Only one is open at a time, so
+// we keep a single shared reference and a single set of dismiss listeners
+// rather than attaching hundreds across the album.
+let activeAltTooltip = null;
+
+function hideActiveAltTooltip() {
+  if (activeAltTooltip) {
+    activeAltTooltip.remove();
+    activeAltTooltip = null;
+  }
+}
+
+// Dismiss the open tooltip on any outside click or scroll. (Clicking the ALT
+// button stops propagation, so these don't fire for the button itself.)
+document.addEventListener("click", hideActiveAltTooltip);
+window.addEventListener("scroll", hideActiveAltTooltip, { passive: true });
+
+function showAltTooltip(button, description) {
+  const tooltip = document.createElement("div");
+  tooltip.className = "gallery-alt-tooltip";
+  tooltip.textContent = description;
+  tooltip.setAttribute("role", "tooltip");
+  tooltip._owner = button;
+  document.body.appendChild(tooltip);
+
+  // Measure off-screen, then place above the button (flip below if there's no
+  // room) and clamp to the viewport so the full text is always on screen.
+  tooltip.style.visibility = "hidden";
+  tooltip.classList.add("visible");
+  const btn = button.getBoundingClientRect();
+  const tip = tooltip.getBoundingClientRect();
+  let left = Math.min(btn.left, window.innerWidth - tip.width - 8);
+  left = Math.max(8, left);
+  let top = btn.top - tip.height - 8;
+  if (top < 8) top = btn.bottom + 8;
+  tooltip.style.left = left + "px";
+  tooltip.style.top = top + "px";
+  tooltip.style.visibility = "";
+
+  activeAltTooltip = tooltip;
+}
+
 // Create ALT button element with tooltip functionality
 function createAltButton(description) {
   const altButton = document.createElement("button");
@@ -519,37 +562,26 @@ function createAltButton(description) {
   altButton.setAttribute("aria-label", "View image description");
   altButton.setAttribute("type", "button");
 
-  // Create tooltip element
-  const tooltip = document.createElement("div");
-  tooltip.className = "gallery-alt-tooltip";
-  tooltip.textContent = description;
-
-  altButton.appendChild(tooltip);
-
-  // Handle click - show/hide tooltip and prevent PhotoSwipe from opening
+  // Handle click - toggle the tooltip and prevent PhotoSwipe from opening
   altButton.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Close any other open tooltips
-    document.querySelectorAll('.gallery-alt-tooltip.visible').forEach(t => {
-      if (t !== tooltip) {
-        t.classList.remove('visible');
-      }
-    });
-
-    // Toggle this tooltip
-    tooltip.classList.toggle('visible');
-  });
-
-  // Close tooltip when clicking outside
-  document.addEventListener("click", (e) => {
-    if (!altButton.contains(e.target)) {
-      tooltip.classList.remove('visible');
+    const isOpen = activeAltTooltip && activeAltTooltip._owner === altButton;
+    hideActiveAltTooltip();
+    if (!isOpen) {
+      showAltTooltip(altButton, description);
     }
   });
 
   return altButton;
+}
+
+// Height (px) of the caption band reserved below the image in the lightbox.
+// We shrink the photo to sit above this band so the caption never covers it.
+// Scales with viewport height, clamped so it stays sensible on any screen.
+function captionBandHeight(viewportY) {
+  return Math.min(200, Math.max(80, Math.round(viewportY * 0.2)));
 }
 
 // Initialize PhotoSwipe lightbox
@@ -565,6 +597,20 @@ function initPhotoSwipe() {
     // Custom options
     closeOnVerticalDrag: true,
     pinchToClose: true,
+
+    // Reserve a band at the bottom of the viewport for the caption so the photo
+    // is scaled to fit *above* it. Without this, tall portrait photos fill the
+    // screen and the caption ends up overlapping the image. Only slides that
+    // actually have a description reserve the space.
+    paddingFn: (viewportSize, itemData) => {
+      const hasCaption = !!itemData?.element?.getAttribute("data-caption");
+      return {
+        top: 0,
+        bottom: hasCaption ? captionBandHeight(viewportSize.y) : 0,
+        left: 0,
+        right: 0,
+      };
+    },
   });
 
   // Add custom download button to toolbar
@@ -722,24 +768,13 @@ function initPhotoSwipe() {
         captionContent.className = 'pswp__caption-content';
         el.appendChild(captionContent);
 
-        // Function to position caption below the image
+        // Size the caption to exactly fill the band reserved by `paddingFn`,
+        // pinned to the bottom of the viewport (the CSS anchors it there). The
+        // photo is scaled to sit above this band, so they never overlap.
         const positionCaption = () => {
-          const slide = pswp.currSlide;
-          if (!slide || !slide.width || !slide.height) return;
-
-          // Get the container dimensions
-          const containerHeight = pswp.viewportSize.y;
-
-          // Calculate the black bar height below the image
-          // PhotoSwipe centers images vertically
-          const zoomLevel = slide.currZoomLevel || 1;
-          const imageDisplayHeight = slide.height * zoomLevel;
-          const blackBarHeight = (containerHeight - imageDisplayHeight) / 2;
-
-          // Position caption in the middle of the black bar below the image
-          // If black bar is small, keep caption at minimum 12px from bottom
-          const captionOffset = Math.max(12, (blackBarHeight / 2) - 20);
-          el.style.bottom = captionOffset + 'px';
+          const hasCaption = !!pswp.currSlide?.data?.element?.getAttribute('data-caption');
+          if (!hasCaption) return;
+          el.style.height = captionBandHeight(pswp.viewportSize.y) + 'px';
         };
 
         // Update caption content and position when slide changes
