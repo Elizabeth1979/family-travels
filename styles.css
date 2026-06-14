@@ -191,6 +191,8 @@ header {
     right: 0;
     z-index: 100;
     overflow: hidden;
+    /* Fade in/out in sync with the album menu slide (0.5s) instead of snapping. */
+    transition: opacity 0.5s ease, visibility 0.5s ease;
 }
 
 /* Album pages keep the header (back link, share, theme toggle) visible so the
@@ -814,9 +816,12 @@ body.menu-open .map-type-toggle {
 /* Hide the page header (title + Admin/theme buttons) while the album list is
    open so it doesn't clutter or overlap the menu's own heading and close (×)
    button. The menu has its own heading and controls, so the page header is
-   redundant while it's open. */
+   redundant while it's open. Fade it out (rather than display:none) so it
+   leaves and returns in step with the menu's slide animation. */
 body.menu-open header {
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .map-type-toggle {
