@@ -283,10 +283,11 @@ header::before {
     background: rgba(255, 255, 255, 0.35);
 }
 
-/* Album page: give the theme toggle the same solid, high-contrast treatment as
-   the back-link and share button. The base glass style left a faint white icon
-   on a translucent background that was hard to see over the map/light page.
-   Using --bg-card / --text-main keeps the contrast strong in both themes. */
+/* Album header icon buttons (share + theme toggle) share one solid,
+   high-contrast style so both stay consistent and legible in light and dark
+   themes. The base glass style left a faint icon on a translucent background;
+   --bg-card / --text-main flip automatically per theme to keep contrast strong. */
+.album-page .share-btn,
 .album-page .theme-toggle {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -294,6 +295,7 @@ header::before {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
+.album-page .share-btn:hover,
 .album-page .theme-toggle:hover {
     background: var(--bg-card-transparent);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
