@@ -811,6 +811,14 @@ body.menu-open .map-type-toggle {
     display: none;
 }
 
+/* Hide the page header (title + Admin/theme buttons) while the album list is
+   open so it doesn't clutter or overlap the menu's own heading and close (×)
+   button. The menu has its own heading and controls, so the page header is
+   redundant while it's open. */
+body.menu-open header {
+    display: none;
+}
+
 .map-type-toggle {
     position: absolute;
     bottom: 30px;
