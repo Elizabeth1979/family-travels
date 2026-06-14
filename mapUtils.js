@@ -23,7 +23,10 @@ export const MAP_PROVIDERS = {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
     options: {
       attribution: 'Tiles &copy; Esri &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC',
-      maxZoom: 16
+      maxZoom: 16,
+      // Don't repeat the world horizontally when zoomed out far; beyond a single
+      // world copy the soft off-map background shows instead of duplicate maps.
+      noWrap: true
     }
   },
   // Dark Mode Default (Esri World Imagery / Satellite)
@@ -33,7 +36,8 @@ export const MAP_PROVIDERS = {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     options: {
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 18
+      maxZoom: 18,
+      noWrap: true
     }
   },
   // Street-level detail (OpenStreetMap). The NatGeo overview map has no
@@ -45,7 +49,8 @@ export const MAP_PROVIDERS = {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     options: {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19
+      maxZoom: 19,
+      noWrap: true
     }
   },
   // Overlay: Place Labels
@@ -55,7 +60,8 @@ export const MAP_PROVIDERS = {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
     options: {
       attribution: '',
-      pane: 'shadowPane' // Use a different pane to ensure it stays on top of base layers but below markers
+      pane: 'shadowPane', // Use a different pane to ensure it stays on top of base layers but below markers
+      noWrap: true
     }
   },
   // Alternative Light (Esri World Street Map)
@@ -64,7 +70,8 @@ export const MAP_PROVIDERS = {
     name: 'Esri World Street Map',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
     options: {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
+      noWrap: true
     }
   },
   // Additional Light (Esri World Topo Map)
@@ -73,7 +80,8 @@ export const MAP_PROVIDERS = {
     name: 'Esri World Topo Map',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
     options: {
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+      noWrap: true
     }
   }
 };
