@@ -1,21 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Family travel globe">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Earth from space">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#667eea"/>
-      <stop offset="1" stop-color="#764ba2"/>
-    </linearGradient>
-    <clipPath id="globe">
-      <circle cx="32" cy="32" r="20"/>
+    <!-- Ocean with sphere shading: lit toward the top-left, darker at the rim -->
+    <radialGradient id="ocean" cx="36%" cy="32%" r="72%">
+      <stop offset="0" stop-color="#6cc0f0"/>
+      <stop offset="0.55" stop-color="#2f86d6"/>
+      <stop offset="1" stop-color="#134f8f"/>
+    </radialGradient>
+    <radialGradient id="land" cx="40%" cy="35%" r="80%">
+      <stop offset="0" stop-color="#5fc36a"/>
+      <stop offset="1" stop-color="#2f8a48"/>
+    </radialGradient>
+    <clipPath id="earth">
+      <circle cx="32" cy="32" r="30"/>
     </clipPath>
   </defs>
-  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
-  <g fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round">
-    <circle cx="32" cy="32" r="20"/>
-    <g clip-path="url(#globe)">
-      <line x1="12" y1="32" x2="52" y2="32"/>
-      <line x1="12" y1="20" x2="52" y2="20"/>
-      <line x1="12" y1="44" x2="52" y2="44"/>
-      <ellipse cx="32" cy="32" rx="10" ry="20"/>
+
+  <!-- Ocean -->
+  <circle cx="32" cy="32" r="30" fill="url(#ocean)"/>
+
+  <!-- Continents and clouds, masked to the sphere -->
+  <g clip-path="url(#earth)">
+    <g fill="url(#land)">
+      <!-- Americas (left) -->
+      <path d="M12 22 C18 19 21 25 18 31 C21 38 17 47 13 44 C8 40 8 27 12 22 Z"/>
+      <!-- Africa / Europe (center) -->
+      <path d="M30 10 C38 12 40 20 36 27 C39 33 35 43 29 48 C25 51 22 47 23 41 C19 36 22 30 21 24 C20 16 24 10 30 10 Z"/>
+      <!-- Asia (upper right) -->
+      <path d="M42 14 C51 13 57 19 53 25 C48 29 43 26 41 22 C38 18 38 15 42 14 Z"/>
+      <!-- Australia (lower right) -->
+      <path d="M46 40 C52 39 55 44 50 47 C45 49 42 45 44 42 C44 41 45 40 46 40 Z"/>
     </g>
+
+    <!-- Clouds -->
+    <g fill="#ffffff">
+      <ellipse cx="22" cy="16" rx="9" ry="3.2" opacity="0.5"/>
+      <ellipse cx="45" cy="34" rx="8" ry="3" opacity="0.45"/>
+      <ellipse cx="30" cy="52" rx="10" ry="3.2" opacity="0.4"/>
+    </g>
+
+    <!-- Soft specular highlight (lit edge of the sphere) -->
+    <circle cx="22" cy="20" r="12" fill="#ffffff" opacity="0.12"/>
   </g>
+
+  <!-- Thin atmosphere rim -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#bfe3ff" stroke-width="1.2" opacity="0.6"/>
 </svg>
