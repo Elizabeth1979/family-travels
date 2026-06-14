@@ -1756,18 +1756,20 @@ body.menu-open .map-type-toggle {
 /* Prev/next navigation arrows.
    Hidden by default: touch visitors swipe between photos, so the arrows would
    just clutter the screen (see the phone view, where they sat over the photo).
-   We only show them to visitors who can't swipe:
+   They become visible in three cases:
 
-   1. Mouse / trackpad users — require BOTH `hover: hover` and `pointer: fine`.
-      A precise, hovering pointer means a real cursor with nothing to swipe.
-      Requiring `pointer: fine` is what excludes phones and tablets: their
-      primary pointer is coarse, so even handsets that wrongly report
-      `hover: hover` (some Samsung/Android browsers do) stay arrow-free.
-   2. Video slides — the Drive iframe swallows swipes, so EVERYONE (touch
-      included) needs the arrows to move past a video. album.js toggles the
-      `pswp--current-video` class on the lightbox root when the current slide is
-      a video. The arrows sit at the screen edges (their own boxes), clear of
-      Drive's centered play/controls, so a single tap still starts the video.
+   1. Touch — tap to reveal. PhotoSwipe's `toggle-controls` tap action toggles
+      the `pswp--ui-visible` class on the root, so the arrows now appear and
+      disappear together with the close/zoom/download controls on every tap
+      (they're hidden on open and whenever the controls are hidden).
+   2. Mouse / trackpad users — `hover: hover` + `pointer: fine` is a precise,
+      hovering pointer (a real cursor with nothing to swipe), so the arrows stay
+      shown the whole time. Requiring `pointer: fine` excludes phones/tablets:
+      their primary pointer is coarse, so even handsets that wrongly report
+      `hover: hover` (some Samsung/Android browsers do) don't trip this rule.
+   3. Video slides — the Drive iframe swallows both swipes and taps, so the
+      arrows are the only way past a video and the controls can't be toggled.
+      album.js adds `pswp--current-video` to force them visible regardless.
 
    `[class*="pswp__button--arrow"]` matches every PhotoSwipe arrow naming
    convention (--arrow, --prev/--next, --left/--right) in one selector. */
@@ -1776,18 +1778,19 @@ body.menu-open .map-type-toggle {
     z-index: 20;
 }
 
+.pswp--ui-visible [class*="pswp__button--arrow"],
+.pswp--current-video [class*="pswp__button--arrow"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
 @media (hover: hover) and (pointer: fine) {
     [class*="pswp__button--arrow"] {
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
     }
-}
-
-.pswp--current-video [class*="pswp__button--arrow"] {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
 }
 
 /* Fade the lightbox's own counter and download button in and out on video
