@@ -24,6 +24,15 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Cover photos are stored at full resolution (=s2000), which is fine in the
+// app but too heavy for link-preview crawlers — WhatsApp in particular skips
+// images that are large or slow to fetch, so the photo silently doesn't show.
+// Serve a lighter ~1200px version to the crawler instead.
+function previewImage(cover) {
+  if (!cover) return "";
+  return String(cover).replace(/=s\d+(-[a-z0-9]+)*$/i, "=w1200");
+}
+
 async function findAlbum(id) {
   try {
     const response = await fetch(
@@ -45,7 +54,7 @@ export default async function handler(req, res) {
   const description = album && album.description
     ? album.description
     : "Explore our family travels through an interactive map.";
-  const image = album && album.cover ? album.cover : "";
+  const image = album && album.cover ? previewImage(album.cover) : "";
 
   const proto = (req.headers["x-forwarded-proto"] || "https").split(",")[0];
   const host = req.headers.host || "";
@@ -65,10 +74,13 @@ export default async function handler(req, res) {
 <title>${safeTitle}</title>
 <meta name="description" content="${safeDescription}">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Our Family Adventures">
 <meta property="og:title" content="${safeTitle}">
 <meta property="og:description" content="${safeDescription}">
 <meta property="og:url" content="${escapeHtml(pageUrl)}">
-${safeImage ? `<meta property="og:image" content="${safeImage}">` : ""}
+${safeImage ? `<meta property="og:image" content="${safeImage}">
+<meta property="og:image:secure_url" content="${safeImage}">
+<meta property="og:image:alt" content="${safeTitle}">` : ""}
 <meta name="twitter:card" content="${safeImage ? "summary_large_image" : "summary"}">
 <meta name="twitter:title" content="${safeTitle}">
 <meta name="twitter:description" content="${safeDescription}">
