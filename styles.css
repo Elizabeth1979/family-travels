@@ -227,9 +227,32 @@ header::before {
     gap: 1rem;
 }
 
+/* Header action buttons — the theme toggle, share button, and admin link all
+   share ONE solid, theme-aware style so they look identical on every page
+   (map/home, album, admin, 3D view). Because the button is opaque and its icon
+   color comes from --text-main, the icon always contrasts with its own button
+   background regardless of what's behind it, so no per-page overrides are needed.
+   --bg-card / --text-main flip automatically between light and dark themes. */
+.theme-toggle,
+.share-btn,
+.admin-link {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover,
+.share-btn:hover,
+.admin-link:hover {
+    background: var(--bg-card-transparent);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+}
+
+/* Round icon buttons */
 .theme-toggle {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -237,14 +260,6 @@ header::before {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: white;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
-
-.theme-toggle:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
 }
 
 .theme-toggle svg {
@@ -252,7 +267,7 @@ header::before {
     height: 20px;
 }
 
-/* Light mode header styling - ensure visibility on light map background */
+/* Light mode header text — keep the title legible over the light map background */
 [data-theme="light"] header {
     color: var(--text-main);
 }
@@ -262,112 +277,16 @@ header::before {
     text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8), 0 0 10px rgba(255, 255, 255, 0.9);
 }
 
-[data-theme="light"] .theme-toggle {
-    background: rgba(0, 0, 0, 0.15);
-    border: 2px solid rgba(0, 0, 0, 0.2);
-    color: var(--text-main);
-}
-
-[data-theme="light"] .theme-toggle:hover {
-    background: rgba(0, 0, 0, 0.25);
-}
-
-/* Dark mode header styling - ensure visibility on dark backgrounds like 3D gallery */
-[data-theme="dark"] .theme-toggle {
-    background: rgba(255, 255, 255, 0.25);
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    color: #ffffff;
-}
-
-[data-theme="dark"] .theme-toggle:hover {
-    background: rgba(255, 255, 255, 0.35);
-}
-
-/* Album header icon buttons (share + theme toggle) share one solid,
-   high-contrast style so both stay consistent and legible in light and dark
-   themes. The base glass style left a faint icon on a translucent background;
-   --bg-card / --text-main flip automatically per theme to keep contrast strong. */
-.album-page .share-btn,
-.album-page .theme-toggle {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-main);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-}
-
-.album-page .share-btn:hover,
-.album-page .theme-toggle:hover {
-    background: var(--bg-card-transparent);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-/* Admin link in the header (matches the theme-toggle glass styling) */
+/* Admin link — same look as the buttons, but a pill with a text label */
 .admin-link {
     display: inline-flex;
     align-items: center;
     height: 40px;
     padding: 0 16px;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: none;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
-
-.admin-link:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
-}
-
-[data-theme="light"] .admin-link {
-    background: rgba(0, 0, 0, 0.15);
-    border: 2px solid rgba(0, 0, 0, 0.2);
-    color: var(--text-main);
-}
-
-[data-theme="light"] .admin-link:hover {
-    background: rgba(0, 0, 0, 0.25);
-}
-
-[data-theme="dark"] .admin-link {
-    background: rgba(255, 255, 255, 0.25);
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    color: #ffffff;
-}
-
-[data-theme="dark"] .admin-link:hover {
-    background: rgba(255, 255, 255, 0.35);
-}
-
-/* Map page header controls: solid dark glass + white text/icon + light border
-   so they stay legible over the map's light tiles in any theme. Scoped to the
-   map page so the admin/album headers keep their own styling. */
-body:not(.admin-page):not(.album-page) .admin-link,
-body:not(.admin-page):not(.album-page) .theme-toggle {
-    background: rgba(0, 0, 0, 0.5);
-    border: 2px solid rgba(255, 255, 255, 0.65);
-    color: #fff;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-body:not(.admin-page):not(.album-page) .admin-link:hover,
-body:not(.admin-page):not(.album-page) .theme-toggle:hover {
-    background: rgba(0, 0, 0, 0.65);
-}
-
-/* Globe/3D Gallery view - always dark background regardless of theme */
-.globe-view .theme-toggle {
-    background: rgba(255, 255, 255, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    color: #ffffff;
-}
-
-.globe-view .theme-toggle:hover {
-    background: rgba(255, 255, 255, 0.45);
 }
 
 .globe-view header h1 {
@@ -2249,27 +2168,15 @@ body.menu-open .map-type-toggle {
 }
 
 /* Share Button (matches other icon buttons) */
+/* Round icon button — visual style is shared with .theme-toggle / .admin-link */
 .share-btn {
-    background: var(--bg-card-transparent);
-    border: 1px solid var(--border-color);
     border-radius: 50%;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: var(--text-light);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
-
-.share-btn:hover {
-    background: #31b8c6;
-    color: var(--text-inverse);
-    border-color: #31b8c6;
-    transform: scale(1.08);
-    box-shadow: 0 4px 16px rgba(49, 184, 198, 0.3);
 }
 
 .share-btn svg {
