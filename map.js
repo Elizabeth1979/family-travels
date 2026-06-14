@@ -173,6 +173,11 @@ async function initLeafletMap() {
     // Hand off to OpenStreetMap when zoomed in past where NatGeo runs out.
     setupZoomDetailSwap();
 
+    // Stop zoom-out at the point where one world copy fills the viewport width,
+    // so the map never repeats sideways and there are no empty side margins.
+    applyWorldMinZoom();
+    map.on('resize', applyWorldMinZoom);
+
     console.log('Leaflet map initialized successfully');
 
     // Fix sizing issue on mobile reload - recalculate size after CSS is applied
@@ -506,6 +511,21 @@ function renderLeafletMarkers(options = {}) {
         frameAllPins();
         hasFramed = true;
     }
+}
+
+// Limit how far the visitor can zoom out: the smallest zoom at which a single
+// world copy still spans the full viewport width. Below this the world would
+// tile horizontally (with noWrap, show empty side margins instead), which the
+// owner finds ugly. A world copy is 256px wide at zoom 0 and doubles each level,
+// so the floor is log2(viewportWidth / 256). Full-world zoom-out is still
+// available — it just stops right before the map would repeat. Recomputed on
+// resize so it stays correct across phone/desktop and orientation changes.
+function applyWorldMinZoom() {
+    if (!map) return;
+    const width = map.getSize().x;
+    if (!width) return;
+    const minZoom = Math.log2(width / 256);
+    map.setMinZoom(minZoom);
 }
 
 // Fit the map so all current pins are on screen. Recalculates the container size
