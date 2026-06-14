@@ -165,14 +165,16 @@ body {
     min-height: 100vh;
 }
 
-/* Focus indicators for accessibility */
-*:focus {
-    outline: 3px solid var(--focus-color);
-    outline-offset: 2px;
+/* Focus indicators for accessibility.
+   Only show the focus ring for keyboard users (:focus-visible). Mouse and touch
+   users who click or tap a control don't get a lingering outline — the browser
+   reserves :focus-visible for keyboard/AT navigation, where the ring is needed.
+   The universal selector covers buttons, links and every other focusable. */
+*:focus:not(:focus-visible) {
+    outline: none;
 }
 
-button:focus,
-a:focus {
+*:focus-visible {
     outline: 3px solid var(--focus-color);
     outline-offset: 2px;
 }
@@ -1268,7 +1270,7 @@ body.menu-open .map-type-toggle {
     background: var(--bg-card);
 }
 
-.album-list-item:focus {
+.album-list-item:focus-visible {
     outline: none;
     border-color: #31b8c6;
     box-shadow: 0 0 0 2px rgba(49, 184, 198, 0.15);
@@ -1650,7 +1652,7 @@ body.menu-open .map-type-toggle {
     background: rgba(0, 0, 0, 0.9);
 }
 
-.gallery-alt-button:focus {
+.gallery-alt-button:focus-visible {
     outline: 2px solid #31b8c6;
     outline-offset: 2px;
 }
@@ -1751,22 +1753,38 @@ body.menu-open .map-type-toggle {
     border: none;
 }
 
-/* Keep the prev/next arrows usable on every slide, including videos. The Drive
-   iframe traps swipes, so the arrows are the way to flip past a video — so
-   force them visible (PhotoSwipe can hide them on touch) and lift them above
-   the player. They sit at the screen edges (their own boxes), clear of Drive's
-   centered play/controls, so a single tap still starts the video. The
-   selectors cover both PhotoSwipe arrow naming conventions (--prev/--next and
-   --left/--right). */
-.pswp__button--arrow,
-.pswp__button--arrow--prev,
-.pswp__button--arrow--next,
-.pswp__button--arrow--left,
-.pswp__button--arrow--right {
+/* Prev/next navigation arrows.
+   Hidden by default: touch visitors swipe between photos, so the arrows would
+   just clutter the screen (see the phone view, where they sat over the photo).
+   We only show them to visitors who can't swipe:
+
+   1. Mouse users — `hover: hover` means the primary input is a pointer that can
+      hover (so there's nothing to swipe), and it covers click-driven devices.
+   2. Video slides — the Drive iframe swallows swipes, so EVERYONE (touch
+      included) needs the arrows to move past a video. album.js toggles the
+      `pswp--current-video` class on the lightbox root when the current slide is
+      a video. The arrows sit at the screen edges (their own boxes), clear of
+      Drive's centered play/controls, so a single tap still starts the video.
+
+   `[class*="pswp__button--arrow"]` matches every PhotoSwipe arrow naming
+   convention (--arrow, --prev/--next, --left/--right) in one selector. */
+[class*="pswp__button--arrow"] {
+    display: none !important;
+    z-index: 20;
+}
+
+@media (hover: hover) {
+    [class*="pswp__button--arrow"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+.pswp--current-video [class*="pswp__button--arrow"] {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    z-index: 20;
 }
 
 /* Fade the lightbox's own counter and download button in and out on video

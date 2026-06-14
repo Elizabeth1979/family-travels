@@ -846,6 +846,19 @@ function initPhotoSwipe() {
   lightbox.on('change', refreshTopBarAutoHide);
   lightbox.on('close', () => clearTimeout(topBarHideTimer));
 
+  // Flag the lightbox root when the current slide is a video. The nav arrows are
+  // hidden for touch visitors (they swipe instead), but the Drive iframe traps
+  // swipes — so on a video everyone needs the arrows. CSS keys off this class to
+  // force them visible on video slides regardless of input type.
+  const refreshVideoArrowState = () => {
+    const pswp = lightbox.pswp;
+    if (!pswp || !pswp.element) return;
+    const isVideo = pswp.currSlide?.data?.element?.getAttribute('data-pswp-type') === 'video';
+    pswp.element.classList.toggle('pswp--current-video', isVideo);
+  };
+  lightbox.on('change', refreshVideoArrowState);
+  lightbox.on('afterInit', refreshVideoArrowState);
+
   lightbox.init();
 
   // Set up Intersection Observer to pause videos when scrolling out of view
