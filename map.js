@@ -14,7 +14,7 @@ let map;
 let albums = [];
 let markers = [];
 let clusterGroup = null;
-let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
+let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (Gallery — masonry photo wall)
 let currentFilter = 'all'; // 'all' | 'travel' | 'event'
 
 // Albums matching the active travel/event filter. Type defaults to 'travel'.
@@ -667,7 +667,7 @@ function announceToScreenReader(message) {
     }, 1000);
 }
 
-// Switch between map types (2D Map vs 3D Gallery)
+// Switch between map types (2D Map vs Gallery)
 async function switchMapType(newType) {
     if (newType === currentMapType) return; // Already using this type
 
@@ -713,7 +713,7 @@ async function switchMapType(newType) {
         updateToggleUI(newType);
 
         // Announce to screen readers
-        const viewName = newType === 'gallery' ? '3D Gallery' : '2D Map';
+        const viewName = newType === 'gallery' ? 'Gallery' : '2D Map';
         announceToScreenReader(`Now viewing ${viewName}`);
 
         hideLoading();
@@ -771,7 +771,7 @@ function initAlbumFilter() {
     });
 }
 
-// Re-render the active view (map markers or 3D gallery) and the sidebar list
+// Re-render the active view (map markers or Gallery) and the sidebar list
 // for the current filter.
 function applyAlbumFilter() {
     populateAlbumList();

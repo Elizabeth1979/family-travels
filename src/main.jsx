@@ -6,7 +6,7 @@ import './index.css'
 
 // =============================================================================
 // CRITICAL: DO NOT MODIFY WITHOUT CAREFUL REVIEW
-// This handles React mounting for the 3D gallery. The root caching is critical.
+// This handles React mounting for the gallery. The root caching is critical.
 // =============================================================================
 
 // Cache for React roots to avoid createRoot() errors on re-mount
