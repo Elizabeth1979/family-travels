@@ -116,7 +116,7 @@ async function initMap() {
     loadAlbumsAndMarkers();
 }
 
-// Initialize 3D Gallery view
+// Initialize Gallery (masonry photo wall) view
 async function initGalleryView() {
     showLoading('Loading Gallery...');
 
