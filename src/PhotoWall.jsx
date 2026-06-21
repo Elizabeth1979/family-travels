@@ -20,8 +20,12 @@ function Tile({ card }) {
     const badgeLabel = TYPE_LABELS[type] || TYPE_LABELS.travel;
     const isEvent = type === 'event';
 
+    // Build the link from the album id only, never from a spreadable `url`
+    // field, so album data can't inject a `javascript:` href.
+    const href = card.id ? `album.html?id=${encodeURIComponent(card.id)}` : '#';
+
     return (
-        <a className="pw-tile" href={card.url} aria-label={`Open album ${card.title}`}>
+        <a className="pw-tile" href={href} aria-label={`Open album ${card.title}`}>
             {card.cover ? (
                 <img
                     className="pw-img"
