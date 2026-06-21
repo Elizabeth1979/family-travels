@@ -26,7 +26,6 @@ window.mountGallery = function (containerId, albums) {
     // Transform albums to cards format
     const cards = albums.map(album => ({
         id: album.id,
-        imageUrl: album.cover,
         alt: album.title,
         title: album.title,
         date: album.date,
