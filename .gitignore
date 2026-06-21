@@ -35,3 +35,6 @@ graphify-out/
 
 # Brainstorming visual companion scratch files
 .superpowers/
+
+# git worktrees (isolated workspaces)
+.claude/worktrees/
