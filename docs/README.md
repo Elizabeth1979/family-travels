@@ -38,6 +38,7 @@ start here. Keep this file current — see the convention at the bottom.
 
 - [sessions/2026-06-21-supabase-backend-productization.md](sessions/2026-06-21-supabase-backend-productization.md) — decided the productization architecture: hybrid Supabase backend (Auth + Postgres + Storage), metadata-only migration, split `caption`/`alt`, AI-drafted captions; wired `.mcp.json`, blocked on owner authenticating the Supabase MCP.
 - [sessions/2026-06-21-ai-roadmap-brainstorm.md](sessions/2026-06-21-ai-roadmap-brainstorm.md) — brainstormed the 4-rung "talk to your app" AI roadmap; chose the Concierge to build first (after Supabase).
+- [sessions/2026-06-21-repo-memory-system.md](sessions/2026-06-21-repo-memory-system.md) — built this docs index + CLAUDE.md conventions, refreshed the Graphify graph, removed Understand-Anything; flagged the two-sessions-on-one-branch collision.
 
 ## 🗒️ Notes
 
