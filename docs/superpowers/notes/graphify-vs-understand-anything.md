@@ -50,3 +50,12 @@ For a repo this small (~40 files), both are arguably overkill — but the compar
 - **Understand-Anything's `pnpm-workspace.yaml` shipped with placeholder strings** (`esbuild: set this to true or false`) instead of booleans, so `pnpm install` left build scripts unrun and `pnpm 11` treated that as a fatal precondition. Fixed locally; should be an upstream issue.
 - **Graphify's 37 communities include many singletons** (single-node config files) — visually noisy at this corpus size. A `--min-cluster-size 2` flag would help.
 - **Neither tool actually inspected the deployed site behavior** — both are static-analysis-only. Useful caveat: they reflect what the code *looks like*, not what it *does at runtime*.
+
+## Outcome (2026-06-21)
+
+**Kept Graphify; removed Understand-Anything from this repo.** For a repo this small, one
+graph is enough, and Graphify is the one actually queried for "where does X connect / what
+bridges these areas." Understand-Anything's onboarding tour wasn't earning its heavier
+regeneration cost. The local `.understand-anything/` output was deleted; the global Claude
+Code plugin was left installed (still available via `/understand` if a future onboarding
+need arises). This note is retained as the record of why.

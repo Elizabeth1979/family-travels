@@ -49,18 +49,20 @@ start here. Keep this file current — see the convention at the bottom.
 - [git-workflow.md](git-workflow.md) — branching, commits, collaboration conventions.
 - [improvement-plan.md](improvement-plan.md) — older codebase cleanup checklist (baseline tooling, linting).
 
-## 🧠 Knowledge graphs (code-comprehension, queryable)
+## 🧠 Knowledge graph (code-comprehension, queryable)
 
-Generated from the *code*, complementary to the project docs above. **Both are static-analysis
-only** (reflect what the code looks like, not runtime behavior) and go stale as code changes —
+Generated from the *code*, complementary to the project docs above. **Static-analysis only**
+(reflects what the code looks like, not runtime behavior) and goes stale as code changes —
 regenerate after significant work.
 
 - **Graphify** → `graphify-out/` (`graph.html` opens standalone; `GRAPH_REPORT.md`). Best for
   "where does X connect / what bridges these areas / what's duplicated." Query with `/graphify`.
-- **Understand-Anything** → `.understand-anything/knowledge-graph.json`. 7 named architectural
-  layers + a 15-step guided tour. Best for onboarding. Query with `/understand-chat`.
-- ⚠️ **Last generated 2026-05-29** — predates the Supabase plan, AI roadmap, photo-wall, and
-  recent admin/map fixes. Refresh before relying on them.
+  ✅ **Refreshed 2026-06-21** (incremental `--update`): 415 nodes / 628 edges / 34 communities;
+  now includes the Supabase plan, AI roadmap, and the repo-memory docs.
+
+> Understand-Anything was evaluated 2026-05-29 and **removed 2026-06-21** — heavier,
+> onboarding-focused, not needed for this small repo. Rationale kept in
+> [superpowers/notes/graphify-vs-understand-anything.md](superpowers/notes/graphify-vs-understand-anything.md).
 
 ---
 

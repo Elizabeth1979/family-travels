@@ -27,7 +27,7 @@ made (and why), artifacts produced, and the next step. Add a keyword line near t
 so it's easy to grep later. Keep it a narrative summary — link to specs/plans in
 `docs/plans/` rather than duplicating them. Then add its entry to `docs/README.md`.
 
-## Knowledge graphs
-`graphify-out/` (`/graphify`) and `.understand-anything/` (`/understand-chat`) are
-static-analysis graphs of the code — regenerate them after significant code changes, and
-note staleness in `docs/README.md`.
+## Knowledge graph
+`graphify-out/` (`/graphify`) is a static-analysis graph of the code — regenerate it after
+significant code changes, and note staleness in `docs/README.md`. (Understand-Anything was
+evaluated and removed 2026-06-21; see `docs/superpowers/notes/graphify-vs-understand-anything.md`.)
