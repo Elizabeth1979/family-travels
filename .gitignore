@@ -32,3 +32,9 @@ backup/
 # Code-comprehension tools (Graphify, Understand-Anything) — generated artifacts
 graphify-out/
 .understand-anything/
+
+# Brainstorming visual companion scratch files
+.superpowers/
+
+# git worktrees (isolated workspaces)
+.claude/worktrees/

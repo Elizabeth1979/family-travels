@@ -29,7 +29,7 @@ let detailLayer = null;         // OpenStreetMap street layer shown when zoomed 
 let detailActive = false;       // true while the OSM detail layer is showing
 let manualBaseOverride = false; // user picked a base map from the top-right layer control
 const DETAIL_ZOOM = 14;         // map zoom at/after which we hand off to the street map
-let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (3D Gallery)
+let currentMapType = 'accessible'; // 'accessible' (Leaflet 2D map) or 'gallery' (Gallery — masonry photo wall)
 let currentFilter = 'all'; // 'all' | 'travel' | 'event'
 
 // Albums matching the active travel/event filter. Type defaults to 'travel'.
@@ -116,7 +116,7 @@ async function initMap() {
     loadAlbumsAndMarkers();
 }
 
-// Initialize 3D Gallery view
+// Initialize Gallery (masonry photo wall) view
 async function initGalleryView() {
     showLoading('Loading Gallery...');
 
@@ -818,7 +818,7 @@ function announceToScreenReader(message) {
     }, 1000);
 }
 
-// Switch between map types (2D Map vs 3D Gallery)
+// Switch between map types (2D Map vs Gallery)
 async function switchMapType(newType) {
     if (newType === currentMapType) return; // Already using this type
 
@@ -864,7 +864,7 @@ async function switchMapType(newType) {
         updateToggleUI(newType);
 
         // Announce to screen readers
-        const viewName = newType === 'gallery' ? '3D Gallery' : '2D Map';
+        const viewName = newType === 'gallery' ? 'Gallery' : '2D Map';
         announceToScreenReader(`Now viewing ${viewName}`);
 
         hideLoading();
@@ -922,7 +922,7 @@ function initAlbumFilter() {
     });
 }
 
-// Re-render the active view (map markers or 3D gallery) and the sidebar list
+// Re-render the active view (map markers or Gallery) and the sidebar list
 // for the current filter.
 function applyAlbumFilter() {
     populateAlbumList();

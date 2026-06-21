@@ -221,3 +221,115 @@
   outline: 2px solid #8b5cf6;
   outline-offset: 2px;
 }
+
+/* ===== Photo Wall gallery (masonry) ===== */
+.pw-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #d3dde3;
+}
+
+[data-theme="dark"] .pw-scroll {
+    background: #0e1726;
+}
+
+.pw-wall {
+    columns: 3;
+    column-gap: 14px;
+    max-width: 1100px;
+    margin: 0 auto;
+
+    /* top padding clears the floating map header */
+    padding: 88px 16px 32px;
+}
+
+.pw-tile {
+    position: relative;
+    display: block;
+    break-inside: avoid;
+    margin-bottom: 14px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    text-decoration: none;
+    color: #fff;
+}
+
+@media (hover: hover) {
+    .pw-tile:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+    }
+}
+
+.pw-img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.pw-placeholder {
+    display: flex;
+    align-items: flex-end;
+    min-height: 180px;
+    padding: 16px;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.pw-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(74, 163, 181, 0.92);
+}
+
+.pw-badge-event {
+    background: rgba(214, 140, 69, 0.95);
+}
+
+.pw-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 14px 12px 11px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+}
+
+.pw-caption b {
+    display: block;
+    font-size: 15px;
+}
+
+.pw-caption span {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.pw-empty {
+    padding: 120px 24px;
+    text-align: center;
+    opacity: 0.7;
+}
+
+@media (max-width: 900px) {
+    .pw-wall {
+        columns: 2;
+    }
+}
+
+@media (max-width: 560px) {
+    .pw-wall {
+        columns: 1;
+        padding-top: 80px;
+    }
+}

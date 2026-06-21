@@ -1,12 +1,12 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import StellarCardGallery from './StellarCardGallery'
+import PhotoWall from './PhotoWall'
 import MapTypeToggle from './components/MapTypeToggle'
 import './index.css'
 
 // =============================================================================
 // CRITICAL: DO NOT MODIFY WITHOUT CAREFUL REVIEW
-// This handles React mounting for the 3D gallery. The root caching is critical.
+// This handles React mounting for the gallery. The root caching is critical.
 // =============================================================================
 
 // Cache for React roots to avoid createRoot() errors on re-mount
@@ -26,7 +26,6 @@ window.mountGallery = function (containerId, albums) {
     // Transform albums to cards format
     const cards = albums.map(album => ({
         id: album.id,
-        imageUrl: album.cover,
         alt: album.title,
         title: album.title,
         date: album.date,
@@ -59,7 +58,7 @@ window.mountGallery = function (containerId, albums) {
 
     galleryRoot.render(
         <React.StrictMode>
-            <StellarCardGallery cards={cards} />
+            <PhotoWall cards={cards} />
         </React.StrictMode>
     );
 
