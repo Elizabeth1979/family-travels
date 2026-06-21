@@ -278,6 +278,10 @@
     padding: 16px;
     font-weight: 700;
     font-size: 18px;
+    /* Force white over the solid placeholder color. Without this the text
+       inherits Leaflet's blue link color (.leaflet-container a), since the
+       wall is mounted inside the #map Leaflet container. */
+    color: #fff;
 }
 
 .pw-badge {
@@ -301,18 +305,31 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 14px 12px 11px;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+    padding: 22px 12px 11px;
+    /* Stronger, taller scrim so white text stays legible even over bright
+       photos (e.g. pale stone / tiled-floor shots). */
+    background: linear-gradient(
+        transparent,
+        rgba(0, 0, 0, 0.35) 35%,
+        rgba(0, 0, 0, 0.85)
+    );
+    /* Drop shadow guards the text where the scrim is still thin near the top. */
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
+/* Set color directly on the text (not just the tile) so it beats the blue
+   color Leaflet's `.leaflet-container a` rule otherwise forces onto these
+   anchors. A directly-matched rule wins over the inherited link color. */
 .pw-caption b {
     display: block;
     font-size: 15px;
+    color: #fff;
 }
 
 .pw-caption span {
     font-size: 12px;
-    opacity: 0.85;
+    color: #fff;
+    opacity: 0.92;
 }
 
 .pw-empty {
