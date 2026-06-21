@@ -29,7 +29,6 @@ window.mountGallery = function (containerId, albums) {
         alt: album.title,
         title: album.title,
         date: album.date,
-        url: `album.html?id=${album.id}`,
         ...album
     }));
 
