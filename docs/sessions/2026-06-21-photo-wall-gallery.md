@@ -57,17 +57,33 @@ want to do, so we cut it from this change.
 - The protected 2D Leaflet map (framing, zoom, off-map background, pin→popup) untouched.
 - No empty-album filtering (deferred).
 
-## Status & resume here
-- **Branch:** `photo-wall-gallery-clean`
-- **Worktree:** `.claude/worktrees/photo-wall`
-- **State:** complete, verified, build passing. **NOT merged / NOT pushed.**
+## Status: SHIPPED ✅
+The gallery is live on `main` via two PRs:
+- **#41** `Replace 3D gallery with a masonry Photo Wall` — the feature.
+- **#42** `Harden Photo Wall tile link against javascript: URLs` — a security follow-up
+  flagged by automated review (build the tile href from `card.id` only, never from a
+  spreadable `url` field).
 
-### Next steps (when ready)
-- [ ] Stop the other concurrent Claude session working in the main folder.
-- [ ] Integrate: either merge `photo-wall-gallery-clean` into `main`, or push it and open
-      a PR. (Ask Claude — it'll do it.)
-- [ ] Ignore/clean up the polluted `feature/photo-wall-gallery` branch (local + origin) —
-      it has an unrelated "Supabase" commit from the other session. Use the clean branch.
+## Part 2 — shipping & cleanup (the messy bit)
+A **second Claude session was running in the same folder** at the same time, which caused
+HEAD to jump around and an unrelated "Supabase" commit to land on our branch. How it was
+handled:
+1. Moved this work into an **isolated git worktree** on a clean branch
+   (`photo-wall-gallery-clean`), rebuilt history by cherry-picking only the good commits
+   (dropping the junk one).
+2. Reviewed task-by-task, verified live in a browser, then **rebased onto the up-to-date
+   `origin/main`** (resolved one tiny `map.js` overlap) and shipped via PR #41.
+3. Fixed the security finding in PR #42.
+4. **Root cause of the "branch mess":** this local folder's `main` had drifted ~40 commits
+   behind the live `origin/main` (local copies don't auto-sync). Caught up with
+   `git reset --hard origin/main` once everything was merged. The live site was never at risk.
+5. Added a **one-time SessionStart hook** (`.claude/settings.local.json`, `"once": true`)
+   that, on the next session start, fast-forwards local `main` to the live site if it's
+   safely behind, or warns otherwise — then removes itself.
+
+### The takeaway
+The live site lives on **GitHub's `main`**; this folder is just a local copy that can fall
+behind. Pull (or let the hook catch up) at the start of work, and ship changes via PRs to `main`.
 
 ### Deferred (separate future work)
 - [ ] Hide empty albums everywhere — needs a backend `count` field + Apps Script redeploy.
