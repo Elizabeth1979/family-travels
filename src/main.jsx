@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import StellarCardGallery from './StellarCardGallery'
+import PhotoWall from './PhotoWall'
 import MapTypeToggle from './components/MapTypeToggle'
 import './index.css'
 
@@ -59,7 +59,7 @@ window.mountGallery = function (containerId, albums) {
 
     galleryRoot.render(
         <React.StrictMode>
-            <StellarCardGallery cards={cards} />
+            <PhotoWall cards={cards} />
         </React.StrictMode>
     );
 
