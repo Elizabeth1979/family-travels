@@ -112,11 +112,20 @@ RLS, and the storage bucket. Each phase is independently shippable.
 > **Tooling decision:** Connect via the **Supabase MCP server** (`mcp.supabase.com`).
 > The CLI is not installed (npx fallback exists). After Phase 0, all schema/RLS/storage
 > work runs through MCP tools (`execute_sql`, `get_advisors`, etc.) directly from chat.
+>
+> **MCP scoping (security):** the committed `.mcp.json` URL is scoped
+> `?read_only=true&features=database,docs` — least-privilege by default, which limits the
+> prompt-injection blast radius and still allows `list_projects` + `SELECT`. Two follow-ups:
+> (1) **pin `&project_ref=<ref>`** once the owner names the project; (2) for the brief
+> Phase-1 schema-create + import window only, temporarily drop `read_only=true` (or add a
+> separate opt-in write entry), then restore read-only. Keep `.mcp.json` on the release
+> checklist so future entries inherit the same discipline.
 
 **Phase 0 — Connect Supabase (one-time, needs Elizabeth)** — see Resume point above.
-- *I do:* add `.mcp.json` at the repo root → ✅ done.
-- *Owner does:* (has account) reload session → `/mcp` → authenticate `supabase` in browser.
-- *Verify:* the Supabase MCP tools are listed and `list_projects` responds.
+- *I do:* add `.mcp.json` at the repo root (read-only, db+docs scoped) → ✅ done.
+- *Owner does:* (has account) reload session → `/mcp` → authenticate `supabase` in browser;
+  tell Claude **which project** so its `project_ref` can be pinned in the URL.
+- *Verify:* the Supabase MCP tools are listed and `list_projects` responds (works read-only).
 
 **Phase 1 — Supabase foundation + read path (get the app running off Postgres)**
 - Create the `albums` + `photos` tables and RLS via MCP `execute_sql`.
