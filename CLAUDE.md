@@ -17,3 +17,21 @@ as-is unless they specifically ask to change it:
 
 Adding or adjusting markers, popups, and album data is fine. Changing the map's
 framing, zoom behavior, or off-map background is not, unless asked.
+
+## Repo memory — docs index
+`docs/README.md` is the single index of all plans, specs, session logs, and knowledge
+graphs. Read it first when picking up work or checking "did we already decide X?". When
+you add or meaningfully change anything under `docs/`, update its one-line entry there in
+the right section. New plans → `docs/plans/`; specs → `docs/superpowers/specs/`.
+
+## Session logs
+At the end of a working/brainstorming session, write a short searchable log to
+`docs/sessions/YYYY-MM-DD-<topic>.md`: what we set out to do, key findings, decisions
+made (and why), artifacts produced, and the next step. Add a keyword line near the top
+so it's easy to grep later. Keep it a narrative summary — link to specs/plans in
+`docs/plans/` rather than duplicating them. Then add its entry to `docs/README.md`.
+
+## Knowledge graph
+`graphify-out/` (`/graphify`) is a static-analysis graph of the code — regenerate it after
+significant code changes, and note staleness in `docs/README.md`. (Understand-Anything was
+evaluated and removed 2026-06-21; see `docs/superpowers/notes/graphify-vs-understand-anything.md`.)
