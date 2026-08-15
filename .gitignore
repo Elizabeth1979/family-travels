@@ -8,9 +8,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Netlify
-.netlify/
-
 # Node modules (if you add any build tools later)
 node_modules/
 

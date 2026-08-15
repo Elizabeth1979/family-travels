@@ -1,26 +1,33 @@
 # Plan: Move family-travels onto a productizable Supabase backend (with easy AI captions)
 
-## ▶ Resume point (last updated 2026-06-21)
-
-**Where we are:** Phase 0 (connect Supabase) — half done.
-
-- ✅ `.mcp.json` added at repo root pointing at the Supabase MCP server
-  (`https://mcp.supabase.com/mcp`). Holds no secrets; auth is via browser OAuth.
-- ⏳ **Owner has a Supabase account already.** Still needs to:
-  1. Reload the Claude Code session (so the new `.mcp.json` is picked up).
-  2. Run `/mcp`, select the `supabase` server, choose **Authenticate**, approve in browser.
-  3. Confirm the `mcp__supabase__*` tools appear.
-- ⛔ Hard blocks that require the human (cannot be done via MCP): creating the account,
-  the OAuth browser approval, and reloading the session. Everything after that is MCP-driven.
-
-**Next action when resuming:** Claude verifies the link (list projects via MCP), then
-starts **Phase 1** — create `albums` + `photos` schema with RLS and run a test query.
-
-**Open questions to answer on resume:**
-- Which Supabase project/org should we use? (owner may have more than one)
-- Roughly how many albums exist today?
-- Is the existing Apps Script URL in `config.js` still live, so the one-time import can
-  read current metadata from it? (Claude can detect from [config.js](../../config.js).)
+> ## ⛔ SUPERSEDED — this plan was retired on 2026-08-15, not completed.
+>
+> **Decision:** family-travels stays exactly as it is — a static site backed by Google
+> Drive via the Apps Script. It is finished, it works, and it is not being migrated.
+>
+> The productization idea moved to a **separate product in its own repository**, because
+> what the owner actually wants is an AI photo product (accessible alt text, duplicate
+> removal, best-shot selection, collages, face naming) for many users — not a rework of
+> one family's travel map. Forking this repo would have dragged the map, the trip framing,
+> and the Drive folder conventions along as baggage.
+>
+> **What was built before retiring, and then removed from this repo:** an `albums`/`photos`
+> schema with RLS, a Supabase client, and a one-time Drive→Postgres import script. All of
+> it was inert — nothing ever read from Supabase, and production was never touched. The
+> Supabase project itself was repurposed as the new product's database.
+>
+> **What survives here:** nothing runtime. `.mcp.json`, `supabaseClient.js`, the import
+> script, and `supabase/migrations/` were all removed once the direction changed.
+>
+> **Why keep this document:** the analysis below is still the clearest statement of *why*
+> Drive-as-a-database is painful (metadata crammed into folder descriptions, no in-app
+> editor, redeploys to change behavior), and the cost reasoning — store resized, not
+> originals; ~2 GB vs ~250 MB for 500 photos — carries over directly to the new product.
+>
+> Two environment facts worth remembering: the Claude Code web environment blocks both
+> `mcp.supabase.com` and `script.google.com` at the network policy (403 on CONNECT), so the
+> repo-level Supabase MCP server can never authenticate there, and anything that reads the
+> Apps Script must run from a local machine.
 
 ---
 
