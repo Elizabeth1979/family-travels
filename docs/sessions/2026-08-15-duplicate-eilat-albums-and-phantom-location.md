@@ -60,11 +60,32 @@ Two genuinely separate folders existed, created 78 seconds apart:
 - `admin.js` — `toAlbumSlug()` helper; `selectAlbum()` no longer pre-fills the fallback;
   slug-collision confirm in `handleSave()`.
 
+## Resolution
+
+Owner cleaned up the data herself the same day: trashed the empty `Eilat 2026` folder and
+placed the correct pin on `Eilat Aug 2026`, which now stores `29.556935,34.949795` (and a
+newly chosen cover). Verified in Drive — no album carries the Jerusalem placeholder any more.
+
+Follow-up finding on how the duplicate actually arose: the second folder was **not** created
+through the admin's "New album" form. The upload includes a 180 MB video, far past what
+`adminUploadFile` can push through Apps Script as base64, so the files came from the Drive app
+on her phone — which created its own destination folder inside the master folder. Its stored
+date `Aug 2026` (abbreviated, versus the `August 2026` she typed into the form a minute
+earlier) is the regex-scraped folder-name value, confirming no date ever went through a form
+for it. Any folder under the master folder is automatically an album, so it appeared as a
+second one.
+
+**Implication for the guard shipped here:** the slug-collision confirm would not have caught
+this case — the titles genuinely differ and the folder never went through the create path. It
+only guards double-submits of "New album". The durable mitigation is the existing "Open folder
+in Drive" link on a freshly created album: uploading through it puts photos in the folder the
+app made. Worth considering a stronger nudge toward that link in the new-album flow if this
+recurs.
+
 ## Next step
 
-Owner decides what to do with the two folders: most likely move the photos from
-`Eilat Aug 2026` into the located `Eilat 2026` and trash the empty one, or just place a pin on
-`Eilat Aug 2026` and delete the empty `Eilat 2026`. Nothing in the repo blocks either.
+None outstanding on the data. PR #44 (CI green, mergeable) is open as a draft awaiting the
+owner's review.
 
 Unrelated, noticed in passing: `npm run lint:js` cannot run at all — ESLint 10 is installed but
 the repo only has the old `.eslintrc` style config, so there is no flat `eslint.config.js` for it
