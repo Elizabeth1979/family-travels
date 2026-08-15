@@ -1,79 +1,33 @@
 # Plan: Move family-travels onto a productizable Supabase backend (with easy AI captions)
 
-## ▶ Resume point (last updated 2026-08-15)
-
-**Where we are:** Phase 0 ✅ done. Phase 1 schema ✅ done. Import + read-path repoint remain.
-
-- ✅ **Supabase is connected** — via the account-level **Supabase connector**, not the repo's
-  `.mcp.json`. See "MCP: which connection actually works" below. No owner action was needed.
-- ✅ **Project chosen:** org `E11i`, project ref **`vsxbedlsnfmsbnlfayae`**,
-  URL `https://vsxbedlsnfmsbnlfayae.supabase.co`, region `eu-central-1`.
-  ⚠️ Still **named `kidtasks-app`** in the dashboard — it was an empty, unused project we
-  reused. Rename it to `family-travels` in **Project Settings → General**; the ref never
-  changes, so nothing in code depends on the name.
-- ✅ **Schema applied**, migration `20260815124827_family_travels_albums_photos`:
-  `albums` + `photos` with RLS, `updated_at` triggers, and indexes on every column the
-  policies filter by. `get_advisors` reports **zero lints** for both security and
-  performance.
-- ✅ **Schema is in version control** at
-  [supabase/migrations/](../../supabase/migrations/20260815124827_family_travels_albums_photos.sql)
-  — a fresh project can be rebuilt from that file alone.
-- ✅ **RLS verified empirically**, not just configured. In a rolled-back transaction with
-  two owners and published/unpublished albums: an `anon` visitor saw only the published
-  album and **leaked 0 unpublished albums and 0 of their photos**; owner A saw their own
-  public + own secret + the other owner's public, and *not* owner B's secret.
-- ✅ **Client added:** [supabaseClient.js](../../supabaseClient.js) (publishable key, safe to
-  ship) plus row→legacy-shape mappers so the existing frontend keeps working.
-- ✅ **Import script written:** [scripts/import-from-apps-script.mjs](../../scripts/import-from-apps-script.mjs),
-  dry-run by default, re-runnable without clobbering owner-edited captions.
-- ✅ **Env documented** in [.env.example](../../.env.example); `.env` stays git-ignored.
-
-> ⚠️ **Lesson learned — never write to a project that is not `ACTIVE_HEALTHY`.**
-> The schema was first applied while the project was still `COMING_UP` after a restore.
-> The migration returned success and `list_tables` showed the tables, but when the restore
-> finished it overwrote the database with the snapshot and the schema silently vanished —
-> `list_migrations` was empty and `public` had zero tables. Check `get_project` status
-> before any migration, and verify afterward with `list_migrations`, not just `list_tables`.
-- ⏳ **Import not yet run** — must run from the owner's machine, see the network note below.
-- ⏳ **Reads not yet repointed** — `utils.js` / `album.js` still call the Apps Script.
-
-**Next action when resuming:** run the import locally (dry run first), then repoint
-`fetchAlbums()` / `loadPhotos()` at Supabase.
-
-### MCP: which connection actually works
-
-There are two Supabase entries, and only one functions in the Claude Code web environment:
-
-| Connection | Status |
-| --- | --- |
-| Account-level **Supabase connector** | ✅ Works. This is what applied the schema. |
-| Repo `.mcp.json` → `mcp.supabase.com` | ❌ Unusable here — the remote environment's network policy returns **403 on CONNECT** to `mcp.supabase.com`, so it can never authenticate, no matter how many times `/mcp` → Authenticate is tried. |
-
-The old "blocked at Phase 0, owner must authenticate" note was chasing that dead path.
-`.mcp.json` is kept for local use (where the host *is* reachable) but is not the path here.
-
-### Network constraint on the import (why it can't run from a Claude session)
-
-The same policy blocks **`script.google.com`** (403 on CONNECT). The one-time import reads
-from the Apps Script, so it **cannot run from a Claude Code web session**. Run it from a
-machine that can reach Google:
-
-```bash
-export SUPABASE_URL="https://vsxbedlsnfmsbnlfayae.supabase.co"
-export SUPABASE_SERVICE_ROLE_KEY="<service_role key — Supabase dashboard, never commit>"
-export OWNER_ID="<uuid of the auth.users row that owns these albums>"
-node scripts/import-from-apps-script.mjs            # dry run: prints album/photo counts
-node scripts/import-from-apps-script.mjs --write    # apply
-```
-
-`OWNER_ID` requires an auth user to exist first — create one in **Authentication → Users**
-(that user becomes Elizabeth's login for the Phase 3 admin panel).
-
-**Open questions still unanswered:**
-- **How many albums exist today?** Unmeasured — the container can't reach the Apps Script.
-  The import's dry run answers this in one command.
-- Is the Apps Script still live? URL is still present in [config.js](../../config.js) and
-  unchanged, but unverified from here for the same reason.
+> ## ⛔ SUPERSEDED — this plan was retired on 2026-08-15, not completed.
+>
+> **Decision:** family-travels stays exactly as it is — a static site backed by Google
+> Drive via the Apps Script. It is finished, it works, and it is not being migrated.
+>
+> The productization idea moved to a **separate product in its own repository**, because
+> what the owner actually wants is an AI photo product (accessible alt text, duplicate
+> removal, best-shot selection, collages, face naming) for many users — not a rework of
+> one family's travel map. Forking this repo would have dragged the map, the trip framing,
+> and the Drive folder conventions along as baggage.
+>
+> **What was built before retiring, and then removed from this repo:** an `albums`/`photos`
+> schema with RLS, a Supabase client, and a one-time Drive→Postgres import script. All of
+> it was inert — nothing ever read from Supabase, and production was never touched. The
+> Supabase project itself was repurposed as the new product's database.
+>
+> **What survives here:** nothing runtime. `.mcp.json`, `supabaseClient.js`, the import
+> script, and `supabase/migrations/` were all removed once the direction changed.
+>
+> **Why keep this document:** the analysis below is still the clearest statement of *why*
+> Drive-as-a-database is painful (metadata crammed into folder descriptions, no in-app
+> editor, redeploys to change behavior), and the cost reasoning — store resized, not
+> originals; ~2 GB vs ~250 MB for 500 photos — carries over directly to the new product.
+>
+> Two environment facts worth remembering: the Claude Code web environment blocks both
+> `mcp.supabase.com` and `script.google.com` at the network policy (403 on CONNECT), so the
+> repo-level Supabase MCP server can never authenticate there, and anything that reads the
+> Apps Script must run from a local machine.
 
 ---
 
