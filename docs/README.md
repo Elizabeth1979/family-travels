@@ -13,8 +13,14 @@ start here. Keep this file current — see the convention at the bottom.
 - **Backend migration → Supabase** is the current focus. Moving album/photo **metadata**
   to Supabase (Postgres + Auth + Storage); existing Drive photos are **not** migrated —
   a `photos` row keeps a URL pointing at Drive (legacy) or Supabase Storage (new uploads).
-  **Blocked at Phase 0:** owner must authenticate the Supabase MCP server in-browser
-  (`/mcp`) before Claude can build schema/import. Plan: [plans/2026-06-21-supabase-backend-captions.md](plans/2026-06-21-supabase-backend-captions.md) (has a live "▶ Resume point").
+  **Phase 0 ✅ + Phase 1 schema ✅ (2026-08-15):** project `family-travels`
+  (ref `vsxbedlsnfmsbnlfayae`) has `albums` + `photos` with RLS verified empirically;
+  schema is version-controlled in [`supabase/migrations/`](../supabase/migrations/).
+  **Next:** run the one-time import (must run from the owner's machine — the Claude web
+  environment blocks `script.google.com`), then repoint reads off the Apps Script.
+  Production is still 100% Drive-backed and untouched. Plan:
+  [plans/2026-06-21-supabase-backend-captions.md](plans/2026-06-21-supabase-backend-captions.md)
+  (has a live "▶ Resume point").
 - **AI "talk to your app" roadmap** is speced and waiting on the migration. 4 rungs;
   Rung 1 (Concierge) builds first. Plan: [plans/2026-06-21-concierge-ai-map.md](plans/2026-06-21-concierge-ai-map.md).
 
