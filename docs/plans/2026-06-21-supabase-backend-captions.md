@@ -1,26 +1,79 @@
 # Plan: Move family-travels onto a productizable Supabase backend (with easy AI captions)
 
-## ▶ Resume point (last updated 2026-06-21)
+## ▶ Resume point (last updated 2026-08-15)
 
-**Where we are:** Phase 0 (connect Supabase) — half done.
+**Where we are:** Phase 0 ✅ done. Phase 1 schema ✅ done. Import + read-path repoint remain.
 
-- ✅ `.mcp.json` added at repo root pointing at the Supabase MCP server
-  (`https://mcp.supabase.com/mcp`). Holds no secrets; auth is via browser OAuth.
-- ⏳ **Owner has a Supabase account already.** Still needs to:
-  1. Reload the Claude Code session (so the new `.mcp.json` is picked up).
-  2. Run `/mcp`, select the `supabase` server, choose **Authenticate**, approve in browser.
-  3. Confirm the `mcp__supabase__*` tools appear.
-- ⛔ Hard blocks that require the human (cannot be done via MCP): creating the account,
-  the OAuth browser approval, and reloading the session. Everything after that is MCP-driven.
+- ✅ **Supabase is connected** — via the account-level **Supabase connector**, not the repo's
+  `.mcp.json`. See "MCP: which connection actually works" below. No owner action was needed.
+- ✅ **Project chosen:** org `E11i`, project ref **`vsxbedlsnfmsbnlfayae`**,
+  URL `https://vsxbedlsnfmsbnlfayae.supabase.co`, region `eu-central-1`.
+  ⚠️ Still **named `kidtasks-app`** in the dashboard — it was an empty, unused project we
+  reused. Rename it to `family-travels` in **Project Settings → General**; the ref never
+  changes, so nothing in code depends on the name.
+- ✅ **Schema applied**, migration `20260815124827_family_travels_albums_photos`:
+  `albums` + `photos` with RLS, `updated_at` triggers, and indexes on every column the
+  policies filter by. `get_advisors` reports **zero lints** for both security and
+  performance.
+- ✅ **Schema is in version control** at
+  [supabase/migrations/](../../supabase/migrations/20260815124827_family_travels_albums_photos.sql)
+  — a fresh project can be rebuilt from that file alone.
+- ✅ **RLS verified empirically**, not just configured. In a rolled-back transaction with
+  two owners and published/unpublished albums: an `anon` visitor saw only the published
+  album and **leaked 0 unpublished albums and 0 of their photos**; owner A saw their own
+  public + own secret + the other owner's public, and *not* owner B's secret.
+- ✅ **Client added:** [supabaseClient.js](../../supabaseClient.js) (publishable key, safe to
+  ship) plus row→legacy-shape mappers so the existing frontend keeps working.
+- ✅ **Import script written:** [scripts/import-from-apps-script.mjs](../../scripts/import-from-apps-script.mjs),
+  dry-run by default, re-runnable without clobbering owner-edited captions.
+- ✅ **Env documented** in [.env.example](../../.env.example); `.env` stays git-ignored.
 
-**Next action when resuming:** Claude verifies the link (list projects via MCP), then
-starts **Phase 1** — create `albums` + `photos` schema with RLS and run a test query.
+> ⚠️ **Lesson learned — never write to a project that is not `ACTIVE_HEALTHY`.**
+> The schema was first applied while the project was still `COMING_UP` after a restore.
+> The migration returned success and `list_tables` showed the tables, but when the restore
+> finished it overwrote the database with the snapshot and the schema silently vanished —
+> `list_migrations` was empty and `public` had zero tables. Check `get_project` status
+> before any migration, and verify afterward with `list_migrations`, not just `list_tables`.
+- ⏳ **Import not yet run** — must run from the owner's machine, see the network note below.
+- ⏳ **Reads not yet repointed** — `utils.js` / `album.js` still call the Apps Script.
 
-**Open questions to answer on resume:**
-- Which Supabase project/org should we use? (owner may have more than one)
-- Roughly how many albums exist today?
-- Is the existing Apps Script URL in `config.js` still live, so the one-time import can
-  read current metadata from it? (Claude can detect from [config.js](../../config.js).)
+**Next action when resuming:** run the import locally (dry run first), then repoint
+`fetchAlbums()` / `loadPhotos()` at Supabase.
+
+### MCP: which connection actually works
+
+There are two Supabase entries, and only one functions in the Claude Code web environment:
+
+| Connection | Status |
+| --- | --- |
+| Account-level **Supabase connector** | ✅ Works. This is what applied the schema. |
+| Repo `.mcp.json` → `mcp.supabase.com` | ❌ Unusable here — the remote environment's network policy returns **403 on CONNECT** to `mcp.supabase.com`, so it can never authenticate, no matter how many times `/mcp` → Authenticate is tried. |
+
+The old "blocked at Phase 0, owner must authenticate" note was chasing that dead path.
+`.mcp.json` is kept for local use (where the host *is* reachable) but is not the path here.
+
+### Network constraint on the import (why it can't run from a Claude session)
+
+The same policy blocks **`script.google.com`** (403 on CONNECT). The one-time import reads
+from the Apps Script, so it **cannot run from a Claude Code web session**. Run it from a
+machine that can reach Google:
+
+```bash
+export SUPABASE_URL="https://vsxbedlsnfmsbnlfayae.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="<service_role key — Supabase dashboard, never commit>"
+export OWNER_ID="<uuid of the auth.users row that owns these albums>"
+node scripts/import-from-apps-script.mjs            # dry run: prints album/photo counts
+node scripts/import-from-apps-script.mjs --write    # apply
+```
+
+`OWNER_ID` requires an auth user to exist first — create one in **Authentication → Users**
+(that user becomes Elizabeth's login for the Phase 3 admin panel).
+
+**Open questions still unanswered:**
+- **How many albums exist today?** Unmeasured — the container can't reach the Apps Script.
+  The import's dry run answers this in one command.
+- Is the Apps Script still live? URL is still present in [config.js](../../config.js) and
+  unchanged, but unverified from here for the same reason.
 
 ---
 

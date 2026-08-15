@@ -2,53 +2,59 @@ module.exports = {
   root: true,
   env: {
     browser: true,
-    es2022: true
+    es2022: true,
   },
   parserOptions: {
     ecmaVersion: "latest",
-    sourceType: "module"
+    sourceType: "module",
   },
-  extends: [
-    "eslint:recommended",
-    "prettier"
-  ],
+  extends: ["eslint:recommended", "prettier"],
   globals: {
     CONFIG: "readonly",
     L: "readonly",
     PhotoSwipeLightbox: "readonly",
-    PhotoSwipe: "readonly"
+    PhotoSwipe: "readonly",
   },
   rules: {
     "no-console": "off",
     "prefer-const": [
       "error",
       {
-        destructuring: "all"
-      }
+        destructuring: "all",
+      },
     ],
     "no-unused-vars": [
       "warn",
       {
         args: "none",
-        ignoreRestSiblings: true
-      }
-    ]
+        ignoreRestSiblings: true,
+      },
+    ],
   },
   overrides: [
     {
       files: ["*.config.js", "vite.config.js", "postcss.config.js", "tailwind.config.js"],
       env: {
-        node: true
-      }
+        node: true,
+      },
     },
     {
       files: ["api/**/*.js"],
       env: {
-        node: true
+        node: true,
       },
       globals: {
-        fetch: "readonly"
-      }
-    }
-  ]
+        fetch: "readonly",
+      },
+    },
+    {
+      files: ["scripts/**/*.mjs"],
+      env: {
+        node: true,
+      },
+      globals: {
+        fetch: "readonly",
+      },
+    },
+  ],
 };
