@@ -124,6 +124,13 @@ function hasLocation(album) {
   return !(album.lat === DEFAULT_LAT && album.lng === DEFAULT_LNG);
 }
 
+// Same slug the Apps Script derives from a folder name, and what album.html
+// looks an album up by. Two albums that reduce to the same slug are a real
+// collision: only the first one found is ever reachable.
+function toAlbumSlug(title) {
+  return (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
 function renderAlbumList() {
   const list = document.getElementById('admin-album-list');
   list.innerHTML = '';
@@ -244,10 +251,17 @@ function selectAlbum(album) {
   document.getElementById('edit-date').value = album.date || '';
   document.getElementById('edit-description').value = album.description || '';
 
+  // An album with no coordinates stored comes back from the Apps Script carrying
+  // the Jerusalem fallback. Putting those numbers in the fields meant the next
+  // Save (picking a cover, fixing a date) wrote them back as if they were a real
+  // pin — the album silently landed in Jerusalem on the public map. Leave the
+  // fields empty and open the picker on the world view, exactly like a new
+  // album, so "no location" stays true until a pin is actually placed.
+  const located = hasLocation(album);
   const lat = typeof album.lat === 'number' ? album.lat : DEFAULT_LAT;
   const lng = typeof album.lng === 'number' ? album.lng : DEFAULT_LNG;
-  document.getElementById('edit-lat').value = lat;
-  document.getElementById('edit-lng').value = lng;
+  document.getElementById('edit-lat').value = located ? lat : '';
+  document.getElementById('edit-lng').value = located ? lng : '';
 
   document.getElementById('save-btn').textContent = 'Save';
   document.getElementById('new-album-help').hidden = true;
@@ -255,7 +269,11 @@ function selectAlbum(album) {
   setDriveLink(album.folderId);
 
   showEditor();
-  initPinMap(lat, lng);
+  if (located) {
+    initPinMap(lat, lng);
+  } else {
+    initPinMap(20, 0, 2);
+  }
   loadCoverChoices(album.folderId);
 }
 
@@ -525,6 +543,24 @@ async function handleSave() {
     return;
   }
 
+  // Creating an album just makes another Drive folder — nothing dedupes them, and
+  // two folders whose names reduce to the same slug fight over the same album
+  // URL. Confirm before adding one on top of an album that is already there.
+  if (mode === 'new') {
+    const clash = albums.find((a) => toAlbumSlug(a.title) === toAlbumSlug(fields.title));
+    if (clash) {
+      const proceed = window.confirm(
+        `An album called "${clash.title}" already exists. Creating another one ` +
+          `with this title makes a second Drive folder, and only one of them ` +
+          `will open from the map.\n\nCreate it anyway?`
+      );
+      if (!proceed) {
+        setStatus('Nothing created — open the existing album instead.', 'info');
+        return;
+      }
+    }
+  }
+
   const saveBtn = document.getElementById('save-btn');
   saveBtn.disabled = true;
 
@@ -542,8 +578,10 @@ async function handleSave() {
         type: fields.type,
         date: fields.date,
         description: fields.description,
-        lat: fields.lat === '' ? DEFAULT_LAT : fields.lat,
-        lng: fields.lng === '' ? DEFAULT_LNG : fields.lng,
+        // Keep whatever was actually entered, blank included — standing in the
+        // Jerusalem fallback here would make an unplaced album look located.
+        lat: fields.lat,
+        lng: fields.lng,
       };
       mode = 'edit';
       document.getElementById('editor-heading').textContent = 'Edit album';
