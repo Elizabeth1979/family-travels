@@ -10,19 +10,22 @@ start here. Keep this file current — see the convention at the bottom.
 
 ## 🟢 Active project state (read this first)
 
-- **Backend migration → Supabase** is the current focus. Moving album/photo **metadata**
-  to Supabase (Postgres + Auth + Storage); existing Drive photos are **not** migrated —
-  a `photos` row keeps a URL pointing at Drive (legacy) or Supabase Storage (new uploads).
-  **Phase 0 ✅ + Phase 1 schema ✅ (2026-08-15):** project `family-travels`
-  (ref `vsxbedlsnfmsbnlfayae`) has `albums` + `photos` with RLS verified empirically;
-  schema is version-controlled in [`supabase/migrations/`](../supabase/migrations/).
-  **Next:** run the one-time import (must run from the owner's machine — the Claude web
-  environment blocks `script.google.com`), then repoint reads off the Apps Script.
-  Production is still 100% Drive-backed and untouched. Plan:
-  [plans/2026-06-21-supabase-backend-captions.md](plans/2026-06-21-supabase-backend-captions.md)
-  (has a live "▶ Resume point").
-- **AI "talk to your app" roadmap** is speced and waiting on the migration. 4 rungs;
-  Rung 1 (Concierge) builds first. Plan: [plans/2026-06-21-concierge-ai-map.md](plans/2026-06-21-concierge-ai-map.md).
+**This repo is done.** family-travels is a finished static site backed by Google Drive via
+the Apps Script. It works, it is deployed on Vercel from `main`, and there is no migration
+in progress. Bug fixes and content changes are welcome; architectural rework is not planned.
+
+- **The Supabase migration was retired on 2026-08-15, not completed.** A schema, client,
+  and import script were built and then removed — all of it inert, production never
+  touched. Rationale and the still-useful analysis are preserved in the superseded plan:
+  [plans/2026-06-21-supabase-backend-captions.md](plans/2026-06-21-supabase-backend-captions.md).
+- **The productization idea moved to a separate product repo.** The owner wants an AI photo
+  product — accessible alt text (the wedge), duplicate removal, best-shot selection,
+  collages, face naming — serving many users. That is a different product from a family
+  travel map, so it starts clean rather than forking this. The Supabase project that was
+  set up here was repurposed as that product's database.
+- **AI "talk to your app" roadmap** ([plans/2026-06-21-concierge-ai-map.md](plans/2026-06-21-concierge-ai-map.md))
+  was written against the retired migration. Treat it as idea material for the new product,
+  not as work queued for this repo.
 
 ---
 
@@ -41,6 +44,8 @@ start here. Keep this file current — see the convention at the bottom.
 - [superpowers/specs/2026-05-29-graphify-and-understand-anything-integration-design.md](superpowers/specs/2026-05-29-graphify-and-understand-anything-integration-design.md) — design for the two-tool evaluation.
 
 ## 📓 Session logs (what happened & why, narrative)
+
+- [sessions/2026-08-15-supabase-retired-product-split.md](sessions/2026-08-15-supabase-retired-product-split.md) — **the decisive one.** Found the parked plan, discovered its Phase 0 blocker was unfixable *and* unnecessary, built and verified the schema, then retired the whole migration: family-travels is done, and the productization idea moved to a separate AI-photo product repo.
 
 - [sessions/2026-06-21-supabase-backend-productization.md](sessions/2026-06-21-supabase-backend-productization.md) — decided the productization architecture: hybrid Supabase backend (Auth + Postgres + Storage), metadata-only migration, split `caption`/`alt`, AI-drafted captions; wired `.mcp.json`, blocked on owner authenticating the Supabase MCP.
 - [sessions/2026-06-21-ai-roadmap-brainstorm.md](sessions/2026-06-21-ai-roadmap-brainstorm.md) — brainstormed the 4-rung "talk to your app" AI roadmap; chose the Concierge to build first (after Supabase).
