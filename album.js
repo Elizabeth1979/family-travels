@@ -274,34 +274,10 @@ async function loadImageDimensions() {
         const isVideo = item.mime && item.mime.startsWith("video/");
 
         if (isVideo) {
-          // Get the video's real aspect ratio from its Drive thumbnail.
-          // (Loading the video file itself cross-origin from Drive doesn't
-          // work, so the old <video> probe always failed and fell back to
-          // 16:9 — which squashed portrait phone videos into a tiny box.)
-          const thumb = new Image();
-          const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
-
-          thumb.onload = () => {
-            if (thumb.naturalWidth && thumb.naturalHeight) {
-              link.setAttribute("data-pswp-width", thumb.naturalWidth);
-              link.setAttribute("data-pswp-height", thumb.naturalHeight);
-            } else {
-              link.setAttribute("data-pswp-width", "1080");
-              link.setAttribute("data-pswp-height", "1920");
-            }
-            resolve();
-          };
-
-          thumb.onerror = () => {
-            // Fallback dimensions if the thumbnail fails to load
-            link.setAttribute("data-pswp-width", "1080");
-            link.setAttribute("data-pswp-height", "1920");
-            resolve();
-          };
-
-          thumb.src = fileIdMatch && fileIdMatch[1]
-            ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w400`
-            : link.href;
+          // Videos already got their slide size in createGalleryItem — the
+          // player letterboxes the picture itself, so there's no aspect ratio
+          // to go and measure here.
+          resolve();
         } else {
           // For images, use a smaller version to get dimensions (much faster!)
           // We only need the aspect ratio, not the full resolution
@@ -419,11 +395,10 @@ function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) 
       videoThumbnail.setAttribute("loading", "lazy");
     }
 
-    let thumbnailUrl = null;
-    const fileIdMatch = item.src.match(/[?&]id=([^&]+)/);
-    if (fileIdMatch && fileIdMatch[1]) {
-      thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w400`;
-    }
+    const fileId = driveFileId(item.src);
+    const thumbnailUrl = fileId
+      ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
+      : null;
 
     if (thumbnailUrl) {
       videoThumbnail.src = thumbnailUrl;
@@ -464,6 +439,15 @@ function createGalleryItem(item, index, lastType, itemCount, eagerLoad = false) 
     galleryItem.appendChild(videoLabel);
     galleryItem.appendChild(playIcon);
     galleryItem.setAttribute("data-pswp-type", "video");
+
+    // Give the video slide the whole screen instead of sizing it to the clip's
+    // own aspect ratio. Both players letterbox the picture inside the box they
+    // get, but their controls don't: a landscape clip on a portrait phone used
+    // to become a short horizontal strip, and the player's seek bar and buttons
+    // rode along its edges, half of them clipped off. A full-screen box gives
+    // the chrome room to sit where it belongs, and the picture is unchanged.
+    galleryItem.setAttribute("data-pswp-width", window.innerWidth);
+    galleryItem.setAttribute("data-pswp-height", window.innerHeight);
   } else {
     const img = document.createElement("img");
 
@@ -577,6 +561,14 @@ function createAltButton(description) {
   return altButton;
 }
 
+// Pull the Drive file ID out of any of the Drive URL shapes we hand around
+// (`uc?export=view&id=…`, `thumbnail?id=…`, `file/d/…/preview`).
+function driveFileId(url) {
+  if (!url) return null;
+  const match = url.match(/[?&]id=([^&]+)/) || url.match(/\/file\/d\/([^/?]+)/);
+  return match ? match[1] : null;
+}
+
 // Initialize PhotoSwipe lightbox
 function initPhotoSwipe() {
   const lightbox = new PhotoSwipeLightbox({
@@ -630,9 +622,9 @@ function initPhotoSwipe() {
 
         // For videos, open Google Drive download page in new tab (can't fetch cross-origin)
         if (isVideo) {
-          const fileIdMatch = sourceUrl.match(/[?&]id=([^&]+)/);
-          if (fileIdMatch && fileIdMatch[1]) {
-            window.open(`https://drive.google.com/uc?export=download&id=${fileIdMatch[1]}`, '_blank');
+          const fileId = driveFileId(sourceUrl);
+          if (fileId) {
+            window.open(`https://drive.google.com/uc?export=download&id=${fileId}`, '_blank');
           }
           return;
         }
@@ -673,54 +665,102 @@ function initPhotoSwipe() {
 
   // Handle videos with custom content.
   //
-  // A video slide opens straight into Google Drive's player, so it's a single
-  // tap to play (Drive's own player can't autoplay, so loading it directly is
-  // the fewest taps possible). The Drive iframe swallows swipes, so to flip
-  // between slides on a video we rely on the prev/next arrows, which we force
-  // visible (even on touch) and float above the player in CSS.
+  // Videos play in a real <video> element streaming the original file straight
+  // from Drive. We used to embed Drive's own player (/preview) instead, but that
+  // player only works when Drive successfully transcoded the file — for the ones
+  // it didn't, every visitor got "There was a problem playing this video" even
+  // though the file itself is fine and downloads happily. Phone videos in
+  // formats Drive won't transcode (HEVC/4K/60fps clips from newer handsets) hit
+  // this constantly.
+  //
+  // Drive's player is still the fallback: if the browser can't decode the
+  // original (desktop Chrome and HEVC, say), we swap the embed back in, so no
+  // video that worked before stops working.
   lightbox.on('contentLoad', (e) => {
     const { content, isLazy } = e;
 
     if (content.data.element && content.data.element.getAttribute('data-pswp-type') === 'video') {
       e.preventDefault();
 
-      // Get the video URL from the href attribute
-      let videoUrl = content.data.element.href || content.data.src;
+      const sourceUrl = content.data.element.href || content.data.src || '';
+      const fileId = driveFileId(sourceUrl);
 
-      // Convert Google Drive URL to proper streaming format
-      // From: https://drive.google.com/uc?export=view&id=FILE_ID
-      // To: https://drive.google.com/file/d/FILE_ID/preview
-      if (videoUrl.includes('drive.google.com')) {
-        const fileIdMatch = videoUrl.match(/[?&]id=([^&]+)/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          videoUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-        }
-      }
+      // Original bytes, with Range support so the player can seek. `confirm=t`
+      // skips the "can't scan this file for viruses" interstitial that Drive
+      // serves instead of the file for anything over ~100 MB.
+      const streamUrl = fileId
+        ? `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
+        : null;
+      // Drive's embedded player, used as the fallback.
+      const embedUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : sourceUrl;
 
-      // Wrapper PhotoSwipe sizes to the video's real aspect ratio (detected
-      // from the thumbnail in loadDimensions).
+      // Wrapper PhotoSwipe sizes to the full slide (see calcSlideSize below);
+      // whichever player ends up inside letterboxes the picture within it.
       const wrapper = document.createElement('div');
       wrapper.className = 'pswp-video-wrapper';
 
       const buildIframe = () => {
         const iframe = document.createElement('iframe');
-        iframe.src = videoUrl;
+        iframe.src = embedUrl;
         iframe.frameBorder = '0';
         iframe.allow = 'autoplay; fullscreen';
         iframe.allowFullscreen = true;
         return iframe;
       };
 
-      wrapper.appendChild(buildIframe());
+      // Fall back to Drive's player. Reached when the browser can't decode the
+      // original, when Drive answers with an HTML page (quota) instead of the
+      // file, or when there's no usable file ID to stream from.
+      const useDrivePlayer = () => {
+        if (wrapper._mode === 'iframe') return;
+        wrapper._mode = 'iframe';
+        wrapper.replaceChildren(buildIframe());
+      };
 
-      // Stop playback by swapping in a fresh embed (which returns Drive's
-      // player to its paused poster). Called for off-screen videos when you
-      // flip to another slide and when the lightbox closes.
+      const useNativePlayer = () => {
+        wrapper._mode = 'video';
+
+        const video = document.createElement('video');
+        video.src = streamUrl;
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.setAttribute('controlsList', 'nodownload');
+        if (fileId) {
+          video.poster = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+        }
+        video.addEventListener('error', useDrivePlayer);
+
+        wrapper.replaceChildren(video);
+
+        // Opening the lightbox is itself a tap, so playback often starts without
+        // a second one. Browsers that refuse to autoplay with sound just leave
+        // the poster and controls up — same as before. Only for the slide the
+        // visitor actually opened, never for the neighbours PhotoSwipe preloads.
+        if (!isLazy) {
+          const attempt = video.play();
+          if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
+        }
+      };
+
+      if (streamUrl) useNativePlayer();
+      else useDrivePlayer();
+
+      // Stop playback. Called for off-screen videos when you flip to another
+      // slide and when the lightbox closes. The native player just pauses and
+      // rewinds; Drive's embed has no API from out here, so it gets swapped for
+      // a fresh one, which returns it to its paused poster.
       wrapper._resetVideo = () => {
+        const video = wrapper.querySelector('video');
+        if (video) {
+          video.pause();
+          // Only rewind once there's a timeline to rewind to — seeking a video
+          // that hasn't loaded its metadata yet throws in some browsers.
+          if (video.readyState > 0) video.currentTime = 0;
+          return;
+        }
         const old = wrapper.querySelector('iframe');
-        const fresh = buildIframe();
-        if (old) old.replaceWith(fresh);
-        else wrapper.appendChild(fresh);
+        if (old) old.replaceWith(buildIframe());
       };
 
       content.element = wrapper;
@@ -730,6 +770,21 @@ function initPhotoSwipe() {
         content.onLoaded();
       }
     }
+  });
+
+  // Keep video slides filling the screen, including after the phone is turned.
+  // The dimensions on the gallery link are only the size at the moment the grid
+  // was built; PhotoSwipe recalculates slide sizes on every resize, so that's
+  // where we re-point a video at the pan area (the space the slide actually
+  // gets). Without this, opening a video in portrait and rotating to landscape
+  // leaves the player squeezed into a portrait-shaped column.
+  lightbox.on('calcSlideSize', (e) => {
+    const slide = e.slide;
+    if (slide.data.element?.getAttribute('data-pswp-type') !== 'video') return;
+
+    slide.width = slide.panAreaSize.x;
+    slide.height = slide.panAreaSize.y;
+    slide.zoomLevels.update(slide.width, slide.height, slide.panAreaSize);
   });
 
   // Add caption support for displaying alt text descriptions
@@ -815,9 +870,9 @@ function initPhotoSwipe() {
   lightbox.on('close', () => clearTimeout(topBarHideTimer));
 
   // Flag the lightbox root when the current slide is a video. The nav arrows are
-  // hidden for touch visitors (they swipe instead), but the Drive iframe traps
-  // swipes — so on a video everyone needs the arrows. CSS keys off this class to
-  // force them visible on video slides regardless of input type.
+  // hidden for touch visitors (they swipe instead), but a video traps swipes —
+  // so on a video everyone needs the arrows. CSS keys off this class to force
+  // them visible on video slides regardless of input type.
   const refreshVideoArrowState = () => {
     const pswp = lightbox.pswp;
     if (!pswp || !pswp.element) return;
@@ -828,53 +883,6 @@ function initPhotoSwipe() {
   lightbox.on('afterInit', refreshVideoArrowState);
 
   lightbox.init();
-
-  // Set up Intersection Observer to pause videos when scrolling out of view
-  setupVideoObserver();
-}
-
-// Set up Intersection Observer to pause videos when they scroll out of view
-function setupVideoObserver() {
-  // Observe the PhotoSwipe container for video iframes
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) {
-        // Video is out of view, pause it by resetting the iframe src
-        const iframe = entry.target;
-        const currentSrc = iframe.src;
-        if (currentSrc) {
-          iframe.src = '';
-          iframe.src = currentSrc;
-        }
-      }
-    });
-  }, {
-    threshold: 0.1 // Trigger when less than 10% is visible
-  });
-
-  // Also observe any video elements in the gallery (though we mainly use iframes)
-  const mutationObserver = new MutationObserver((mutations) => {
-    mutations.forEach(mutation => {
-      mutation.addedNodes.forEach(node => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          // Look for iframes in the PhotoSwipe container
-          const iframes = node.querySelectorAll ? node.querySelectorAll('iframe') : [];
-          iframes.forEach(iframe => observer.observe(iframe));
-
-          // If the node itself is an iframe
-          if (node.tagName === 'IFRAME') {
-            observer.observe(node);
-          }
-        }
-      });
-    });
-  });
-
-  // Watch for PhotoSwipe content being added to the DOM
-  mutationObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
 }
 
 // generateAltTextFromFilename removed - now using AI-generated descriptions from Apps Script

@@ -1703,6 +1703,16 @@ body.menu-open header {
     border: none;
 }
 
+/* The native player (used whenever we can stream the original file from Drive).
+   `contain` keeps the real aspect ratio inside the box PhotoSwipe sized from
+   the video's thumbnail, so portrait phone clips aren't stretched. */
+.pswp-video-wrapper video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
 /* Prev/next navigation arrows.
    Hidden by default: touch visitors swipe between photos, so the arrows would
    just clutter the screen (see the phone view, where they sat over the photo).
@@ -1717,9 +1727,10 @@ body.menu-open header {
       shown the whole time. Requiring `pointer: fine` excludes phones/tablets:
       their primary pointer is coarse, so even handsets that wrongly report
       `hover: hover` (some Samsung/Android browsers do) don't trip this rule.
-   3. Video slides — the Drive iframe swallows both swipes and taps, so the
-      arrows are the only way past a video and the controls can't be toggled.
-      album.js adds `pswp--current-video` to force them visible regardless.
+   3. Video slides — the player swallows both swipes and taps (the Drive iframe
+      entirely, the native player over its own controls), so the arrows are the
+      reliable way past a video. album.js adds `pswp--current-video` to force
+      them visible regardless.
 
    `[class*="pswp__button--arrow"]` matches every PhotoSwipe arrow naming
    convention (--arrow, --prev/--next, --left/--right) in one selector. */
