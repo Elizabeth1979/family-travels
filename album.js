@@ -569,6 +569,15 @@ function driveFileId(url) {
   return match ? match[1] : null;
 }
 
+// The original file's bytes, with Range support so a player can seek. This is
+// the endpoint that hands the file straight over — no Drive interface, so a
+// visitor following it never lands anywhere they could browse from. `confirm=t`
+// skips the "can't scan this file for viruses" page Drive serves instead of the
+// file for anything over ~100 MB.
+function driveFileUrl(fileId) {
+  return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
+}
+
 // Initialize PhotoSwipe lightbox
 function initPhotoSwipe() {
   const lightbox = new PhotoSwipeLightbox({
@@ -620,11 +629,12 @@ function initPhotoSwipe() {
         const index = pswp.currIndex;
         const filename = galleryItems[index]?.name || 'download';
 
-        // For videos, open Google Drive download page in new tab (can't fetch cross-origin)
+        // Videos go straight to the file rather than through a blob like images
+        // do — they're far too big to pull into memory first.
         if (isVideo) {
           const fileId = driveFileId(sourceUrl);
           if (fileId) {
-            window.open(`https://drive.google.com/uc?export=download&id=${fileId}`, '_blank');
+            window.open(driveFileUrl(fileId), '_blank');
           }
           return;
         }
@@ -685,12 +695,7 @@ function initPhotoSwipe() {
       const sourceUrl = content.data.element.href || content.data.src || '';
       const fileId = driveFileId(sourceUrl);
 
-      // Original bytes, with Range support so the player can seek. `confirm=t`
-      // skips the "can't scan this file for viruses" interstitial that Drive
-      // serves instead of the file for anything over ~100 MB.
-      const streamUrl = fileId
-        ? `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
-        : null;
+      const streamUrl = fileId ? driveFileUrl(fileId) : null;
       // Drive's embedded player, used as the fallback.
       const embedUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : sourceUrl;
 
